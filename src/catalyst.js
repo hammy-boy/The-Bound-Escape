@@ -63,8 +63,62 @@ export class Catalyst {
     this._wasReady = false;
   }
 
+  // Temporary test powers: never persist test selections into a normal run.
+  activateTestPower(slot) {
+    const powers = {
+      1: { key: 'inferno', tier: 'EPIC', hex: '#ff342e', rgb: [1, 0.08, 0.04], name: 'BLOODFIRE NOVA', line: 'Crimson fireburst.' },
+      2: { key: 'stasis', tier: 'RARE', hex: '#a855f7', rgb: [0.66, 0.33, 0.97], name: 'RIFT STASIS', line: 'Lock nearby threats in a rift.' },
+      3: { key: 'bloodwell', tier: 'RARE', hex: '#ff4f6d', rgb: [1, 0.18, 0.32], name: 'BLOODWELL SURGE', line: 'Restore resolve and release a crimson shockwave.' },
+      4: { key: 'kinetic', tier: 'COMMON', hex: '#a8a29a', rgb: [0.68, 0.66, 0.63], name: 'KINETIC SHOCKWAVE', line: 'A powerful concussion blast.' },
+      5: { key: 'matter', tier: 'MYTHIC', hex: '#ffb62e', rgb: [1, 0.71, 0.18], name: 'MATTER DISINTEGRATION', line: 'Plasma fists.' },
+    };
+    const def = powers[slot];
+    if (!def) return false;
+    if (!this.testMode) this.preTestSnapshot = this.def ? { key: this.def.key, charge: this.charge } : null;
+    this.testMode = true;
+    this.def = def;
+    this.unlocked = true;
+    this.charge = 1;
+    this._wasReady = true;
+    this.g.hud.anomalyLabel(def);
+    this.g.hud.anomaly(1, true);
+    if (slot === 1) {
+      this.g.player.headWorld(_p).setY(1.1);
+      this.g.addTrauma(1.7);
+      this.g.flashV = 0.9;
+      this.g.env.burst(_p, 52, def.rgb, 2.3, 8.5, 0.55, 0.055);
+      this.g.audio.shockwave(1);
+      this._concuss(_p, 5.0, { force: 3.2, shatter: true, damage: 0.9 });
+    } else if (slot === 2) {
+      const p = this.g.player.root.position;
+      for (const enemy of this.g.fighters) {
+        if (enemy.ko || enemy.officer || enemy.mode === 'offscreen' || !enemy.root.visible) continue;
+        if (enemy.distanceTo(p) <= 7) this._anchor(enemy, 2.2, 0.8);
+      }
+      this.g.env.burst(this.g.player.headWorld(_p).setY(1.1), 30, def.rgb, 1.2, 4.5, 0.8, 0.045);
+    } else if (slot === 3) {
+      this.g.player.resolve = Math.min(3, (this.g.player.resolve || 0) + 1);
+      this.g.player.headWorld(_p).setY(1.1);
+      this.g.env.burst(_p, 38, def.rgb, 1.5, 5.5, 0.75, 0.05);
+      this._concuss(_p, 3.8, { force: 2.0, damage: 0.35 });
+    } else if (slot === 4) {
+      this.g.player.headWorld(_p).setY(1.1);
+      this.g.addTrauma(1.8);
+      this.g.flashV = 0.85;
+      this.g.env.burst(_p, 56, def.rgb, 2.4, 8.8, 0.5, 0.055);
+      this.g.audio.shockwave(1);
+      this._concuss(_p, 5.2, { force: 3.5, shatter: true, damage: 1.0 });
+    } else if (slot === 5) {
+      this._plasma();
+    }
+    return true;
+  }
+
   // ---------- persistence ----------
-  snapshot() { return this.def ? { key: this.def.key, charge: this.charge } : null; }
+  snapshot() {
+    if (this.testMode) return this.preTestSnapshot;
+    return this.def ? { key: this.def.key, charge: this.charge } : null;
+  }
 
   /** a rolled ability is once per life: a refresh must not hand you a re-roll */
   apply(state) {
@@ -91,6 +145,7 @@ export class Catalyst {
   }
 
   reset() {
+    this.testMode = false; this.preTestSnapshot = null;
     this.unlocked = false;
     this.def = null;
     this.charge = 0; this.combo = 0; this.comboT = 0; this.plasma = 0;
