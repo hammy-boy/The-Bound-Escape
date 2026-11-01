@@ -48,7 +48,9 @@ export class Player {
     this.hitDone = true;
     this.busy = 0;                 // can't act (grabbed, prying, etc.)
     this.shakeSelf = 0;
-    this.falling = false;          // the deck stopped being under you
+    this.falling = false;
+    this.jumping = false;
+    this.jumpVy = 0;          // the deck stopped being under you
     this.vy = 0;
     this.speed = 0;
     this.roll = 0;
@@ -340,8 +342,22 @@ export class Player {
         this.vy = (this.vy ?? 0) - 26 * dt;
         this.root.position.y += this.vy * dt;
       } else {
-        if (opts.clamp) opts.clamp(this.root.position);
-        this.root.position.y = THREE.MathUtils.damp(this.root.position.y, 0, 12, dt);
+        if (opts.allowJump && input.pressed('Space') && !this.jumping) {
+          this.jumping = true;
+          this.jumpVy = 7.2;
+        }
+        if (this.jumping) {
+          this.jumpVy -= 19 * dt;
+          this.root.position.y += this.jumpVy * dt;
+          if (this.root.position.y <= 0) {
+            this.root.position.y = 0;
+            this.jumpVy = 0;
+            this.jumping = false;
+          }
+        } else {
+          if (opts.clamp) opts.clamp(this.root.position);
+          this.root.position.y = THREE.MathUtils.damp(this.root.position.y, 0, 12, dt);
+        }
       }
       const moving = Math.hypot(vx, vz);
       this.walkPhase = (this.walkPhase || 0) + dt * (2.6 + moving * 1.35);
