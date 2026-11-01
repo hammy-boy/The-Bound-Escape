@@ -1117,7 +1117,7 @@ export class Director {
         this.after(0.55, () => this.hud.blur(0));
         this.say(`${def.tier} · ${def.name}`, def.line, 6.5);
       });
-      this.after(13.6, () => this.prompt('<b>1</b> — BASE STRIKE  ·  <b>2</b> — SPEND THE WHOLE METER'));
+      this.after(13.6, () => this.prompt('<b>1</b> — BASE STRIKE  ·  <b>Z</b> — SPEND THE WHOLE METER'));
       this.after(15.4, () => this.think('Three of the pods did not just vent gas. Three of them are standing up.', 4.6));
       this.after(16.8, () => this.goto('troopers'));
       return;
@@ -1155,7 +1155,7 @@ export class Director {
       this._hammerAim = null;
       this.troopersDown = this.troopersDown || 0;
       this.spawnTroopers();
-      this.prompt('<b>WASD</b> — LEAVE THE SPOT WHEN HE COCKS THE HAMMER  ·  <b>2</b> — SPEND IT ON ARMOUR');
+      this.prompt('<b>WASD</b> — LEAVE THE SPOT WHEN HE COCKS THE HAMMER  ·  <b>Z</b> — SPEND IT ON ARMOUR');
       this.after(1.4, () => this.say('CONTAINMENT TROOPER', 'Hall four: subject contained. Subject is not contained.', 3.6));
       this.after(5.2, () => this.think('Insulated plate, a visor with no chin under it, and a hammer on a pneumatic line. Knuckles are not in this argument.', 5.4));
       this.after(11.0, () => this.think('He puts all of his weight into one swing. Step out of the spot you were in and the spot becomes his problem.', 5.2));
@@ -1681,7 +1681,7 @@ export class Director {
         if (left === 2) this.think('The plate is in around his ribs and he is not getting up. Two of them still have their feet.', 3.8);
         if (left === 1) this.think('One left. The meter is already coming back.', 3.4);
         if (left === 0) { this.prompt(null); this.think('The last hammer comes down on the deck and stops charging.', 3.8); }
-        else this.prompt('<b>1</b> — STRIKE  ·  <b>2</b> — ANOMALY  ·  <b>WASD</b> — OFF THE SPOT');
+        else this.prompt('<b>1</b> — STRIKE  ·  <b>Z</b> — ANOMALY  ·  <b>WASD</b> — OFF THE SPOT');
       } else if (part === 'knee') {
         audio.hit(0.6);
         if (!this._kneeLine || this.time - this._kneeLine > 4) {
