@@ -247,7 +247,7 @@ function enterRoom(section, phase, resolve, keepAbility = true) {
 }
 
 const CONTROLS_LEGEND = {
-  cell: '<kbd>WASD</kbd> rock · <kbd>LMB/RMB</kbd> punch · <kbd>F</kbd> headbutt · <kbd>E</kbd> chair · <kbd>SPACE</kbd> strain · <kbd>SHIFT</kbd> brace · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu · <kbd>H</kbd> hide',
+  cell: '<kbd>WASD</kbd> rock · <kbd>LMB/RMB</kbd> punch · <kbd>F</kbd> headbutt · <kbd>E</kbd> chair · <kbd>Z</kbd> release restraints · <kbd>SHIFT</kbd> brace · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu · <kbd>H</kbd> hide',
   ring: '<kbd>WASD</kbd> run · <kbd>SHIFT</kbd> brace · <kbd>LMB/RMB</kbd> strike · <kbd>E</kbd> interact · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu · <kbd>H</kbd> hide',
   turbine: '<kbd>WASD</kbd> run · <kbd>LMB/RMB</kbd> strike only when they miss · <kbd>F</kbd> headbutt · <kbd>SPACE</kbd> jump · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu · <kbd>H</kbd> hide',
   core: '<kbd>WASD</kbd> run · <kbd>1</kbd> base strike · <kbd>2</kbd> anomaly · <kbd>LMB/RMB</kbd> punch · <kbd>F</kbd> headbutt · <kbd>SHIFT</kbd> brace · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu',
