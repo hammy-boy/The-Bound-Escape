@@ -23,9 +23,19 @@ export class Input {
       if (e.repeat) return;
       this.held.add(e.code);
       this.edges.add(e.code);
+      // Use the typed letter as well as the physical key position. This keeps
+      // letter prompts (especially Z for the restraints) working on alternate
+      // keyboard layouts where the character and e.code can differ.
+      if (e.key?.toLowerCase() === 'z') {
+        this.held.add('KeyZ');
+        this.edges.add('KeyZ');
+      }
       if (['Space', 'Tab', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(e.code)) e.preventDefault();
     });
-    addEventListener('keyup', (e) => this.held.delete(e.code));
+    addEventListener('keyup', (e) => {
+      this.held.delete(e.code);
+      if (e.key?.toLowerCase() === 'z') this.held.delete('KeyZ');
+    });
     addEventListener('blur', () => this.held.clear());
 
     canvas.addEventListener('mousedown', (e) => {
