@@ -203,11 +203,12 @@ export class Director {
     if (second.ko && this.phase === 'escalate') {
       if (!this.freePrompt) {
         this.freePrompt = true;
-        this.prompt('<b>E</b> — WEDGE THE SPLINTERED WOOD INTO THE ZIP-TIES');
-        this.think('His nightstick is lying inches from your pinned feet.', 4.2);
+        this.prompt('<b>Z</b> — USE THE WOOD. HOLD Z TO BREAK THE ZIP-TIES.');
+        this.think('His nightstick is lying inches from your pinned feet. You can use the broken wood to free yourself.', 4.2);
         this.after(1.6, () => this.say('THE SECOND GUARD', 'Nnngh — get off me —', 3));
       }
-      if (this.input.pressed('KeyE')) { this.audio.creak(0.8); this.goto('freedom'); }
+      // Z both starts the restraint-release sequence and, if held, strains the ties.
+      if (this.input.pressed('KeyZ')) { this.audio.creak(0.8); this.goto('freedom'); }
     }
     if (this.player.resolve <= 0) this.blackout('escalate');
   }
