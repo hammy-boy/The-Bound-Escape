@@ -374,13 +374,13 @@ function resolveHits() {
 // ---------------- actions ----------------
 function handleActions() {
   const i = input;
-  // <b>1</b> is the base strike: the same fist the mouse throws, except it picks
-  // the hand so one key still reads as a combination
-  if (i.pressed('Digit1')) player.startPunch(catalyst.unlocked ? catalyst.nextStrike() : 'left');
+  // Temporary test build: keys 1–5 activate the five powers without unlocking them permanently.
+  for (const [digit, slot] of [['Digit1', 1], ['Digit2', 2], ['Digit3', 3], ['Digit4', 4], ['Digit5', 5]]) {
+    if (i.pressed(digit)) catalyst.activateTestPower(slot);
+  }
   if (i.pressed('MB_LEFT')) player.startPunch('left');
   if (i.pressed('MB_RIGHT')) player.startPunch('right');
   if (i.pressed('KeyF')) player.startPunch('headbutt');
-  if (i.pressed('Digit2')) catalyst.fire();
   if (i.pressed('KeyE') && player.state === 'loose') {
     const near = game.fighters.some((g) => !g.ko && g.root.visible && g.distanceTo(player.root.position) < 1.6);
     if (near) player.startPunch('chair');
@@ -437,7 +437,7 @@ function tick(now) {
   if (dt > 0 && !game.over) {
     director.update(dt);
     handleActions();
-    player.update(dt, input, game.env, director.opts);
+    player.update(dt, input, game.env, { ...director.opts, allowJump: !['awaken', 'freedom', 'leap'].includes(director.phase) });
     // on the floor and out cold: nobody moves, nothing lands, and you cannot
     // swing at whatever was standing over you a moment ago
     if (!director.blacked) {
