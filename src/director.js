@@ -215,7 +215,7 @@ export class Director {
   ph_freedom(dt) {
     const { player, audio } = this;
     if (dt === 0) {
-      this.prompt('<b>SPACE</b> — TWIST THE WOOD. HOLD IT.');
+      this.prompt('<b>Z</b> — TWIST THE WOOD. HOLD IT.');
       this.think('The plastic strains. It turns white under the pressure.', 4.4);
       this.strain = 0;
       player.tieStrain = 0;
@@ -223,7 +223,7 @@ export class Director {
     }
 
     if (player.state === 'wristsFree') {
-      if (this.input.pressed('Space')) {
+      if (this.input.pressed('KeyZ')) {
         player.state = 'free';
         player.busy = 0.8;
         audio.snap(); audio.creak(0.6);
@@ -247,8 +247,8 @@ export class Director {
       return;
     }
 
-    const hold = this.input.down('Space');
-    const tap = this.input.pressed('Space');
+    const hold = this.input.down('KeyZ');
+    const tap = this.input.pressed('KeyZ');
     if (hold || tap) {
       this.strain += hold ? dt * 0.85 : 0.17;
       player.tieStrain = clamp01(0.25 + this.strain / 2.2);
@@ -266,7 +266,7 @@ export class Director {
       player.state = 'wristsFree';
       player.addImpulse(0, -0.8);
       this.world.burst(player.body.localToWorld(new THREE.Vector3(0, 0.25, 0.3)), 12, [0.85, 0.85, 0.9], 0.8, 1.8);
-      this.prompt('<b>SPACE</b> — STAND UP');
+      this.prompt('<b>Z</b> — STAND UP');
       this.say('', 'The plastic snaps. Your hands are free.', 4.2);
     }
   }
