@@ -375,12 +375,9 @@ function resolveHits() {
 function handleActions() {
   const i = input;
   // Temporary test build: keys activate powers without unlocking them permanently.
-  for (const [key, slot] of [['Digit1', 1], ['Digit3', 3], ['Digit4', 4], ['Digit5', 5]]) {
+  for (const [key, slot] of [['Digit1', 1], ['Digit2', 2], ['Digit3', 3], ['Digit4', 4], ['Digit5', 5]]) {
     if (i.pressed(key)) catalyst.activateTestPower(slot);
   }
-  // Z replaces 2 for the anomaly power after it becomes available; keep Z
-  // reserved for freeing the restraints during the opening sequence.
-  if (['rift', 'troopers'].includes(director.phase) && i.pressed('KeyZ')) catalyst.activateTestPower(2);
   if (i.pressed('MB_LEFT')) player.startPunch('left');
   if (i.pressed('MB_RIGHT')) player.startPunch('right');
   if (i.pressed('KeyF')) player.startPunch('headbutt');
