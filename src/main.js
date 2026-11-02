@@ -374,9 +374,10 @@ function resolveHits() {
 // ---------------- actions ----------------
 function handleActions() {
   const i = input;
-  // Z spends the player's actual unlocked anomaly power in Section Four.
-  // Earlier in the opening, Z remains reserved for releasing the restraints.
-  if (director.section >= 4 && i.pressed('KeyZ')) catalyst.fire();
+  // In Section Four, Z activates the anomaly power. Earlier in the opening,
+  // Z remains reserved for releasing the restraints. This test activation is
+  // immediate so the power can be tried without waiting for a charge meter.
+  if (director.section >= 4 && i.pressed('KeyZ')) catalyst.activateTestPower(2);
   if (i.pressed('MB_LEFT')) player.startPunch('left');
   if (i.pressed('MB_RIGHT')) player.startPunch('right');
   if (i.pressed('KeyF')) player.startPunch('headbutt');
