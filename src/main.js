@@ -374,9 +374,12 @@ function resolveHits() {
 // ---------------- actions ----------------
 function handleActions() {
   const i = input;
-  // Temporary test build: keys activate powers without unlocking them permanently.
-  for (const [key, slot] of [['Digit1', 1], ['Digit2', 2], ['Digit3', 3], ['Digit4', 4], ['Digit5', 5]]) {
-    if (i.pressed(key)) catalyst.activateTestPower(slot);
+  // Temporary test powers are only available in Section Four, where the anomaly is introduced.
+  // This prevents number keys from hijacking the opening restraint sequence.
+  if (director.section >= 4) {
+    for (const [key, slot] of [['Digit1', 1], ['Digit2', 2], ['Digit3', 3], ['Digit4', 4], ['Digit5', 5]]) {
+      if (i.pressed(key)) catalyst.activateTestPower(slot);
+    }
   }
   if (i.pressed('MB_LEFT')) player.startPunch('left');
   if (i.pressed('MB_RIGHT')) player.startPunch('right');
