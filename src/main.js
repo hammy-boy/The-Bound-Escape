@@ -374,15 +374,9 @@ function resolveHits() {
 // ---------------- actions ----------------
 function handleActions() {
   const i = input;
-  // Temporary test powers are only available in Section Four, where the anomaly is introduced.
-  // This prevents number keys from hijacking the opening restraint sequence.
-  if (director.section >= 4) {
-    // Z activates the anomaly power; number keys must not trigger it.
-    if (i.pressed('KeyZ')) catalyst.activateTestPower(2);
-    for (const [key, slot] of [['Digit1', 1], ['Digit3', 3], ['Digit4', 4], ['Digit5', 5]]) {
-      if (i.pressed(key)) catalyst.activateTestPower(slot);
-    }
-  }
+  // Z spends the player's actual unlocked anomaly power in Section Four.
+  // Earlier in the opening, Z remains reserved for releasing the restraints.
+  if (director.section >= 4 && i.pressed('KeyZ')) catalyst.fire();
   if (i.pressed('MB_LEFT')) player.startPunch('left');
   if (i.pressed('MB_RIGHT')) player.startPunch('right');
   if (i.pressed('KeyF')) player.startPunch('headbutt');
