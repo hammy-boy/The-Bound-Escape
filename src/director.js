@@ -207,8 +207,9 @@ export class Director {
         this.think('His nightstick is lying inches from your pinned feet. You can use the broken wood to free yourself.', 4.2);
         this.after(1.6, () => this.say('THE SECOND GUARD', 'Nnngh — get off me —', 3));
       }
-      // Z both starts the restraint-release sequence and, if held, strains the ties.
-      if (this.input.pressed('KeyZ')) { this.audio.creak(0.8); this.goto('freedom'); }
+      // Start as soon as Z is held, so the same continuous hold also strains the ties.
+      // Requiring a separate key press here made the opening feel like Z was ignored.
+      if (this.input.down('KeyZ')) { this.audio.creak(0.8); this.goto('freedom'); }
     }
     if (this.player.resolve <= 0) this.blackout('escalate');
   }
