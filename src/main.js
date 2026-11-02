@@ -250,7 +250,7 @@ const CONTROLS_LEGEND = {
   cell: '<kbd>WASD</kbd> rock · <kbd>LMB/RMB</kbd> punch · <kbd>F</kbd> headbutt · <kbd>E</kbd> chair · <kbd>Z</kbd> release restraints · <kbd>SHIFT</kbd> brace · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu · <kbd>H</kbd> hide',
   ring: '<kbd>WASD</kbd> run · <kbd>SHIFT</kbd> brace · <kbd>LMB/RMB</kbd> strike · <kbd>E</kbd> interact · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu · <kbd>H</kbd> hide',
   turbine: '<kbd>WASD</kbd> run · <kbd>LMB/RMB</kbd> strike only when they miss · <kbd>F</kbd> headbutt · <kbd>SPACE</kbd> jump · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu · <kbd>H</kbd> hide',
-  core: '<kbd>WASD</kbd> run · <kbd>1</kbd> base strike · <kbd>2</kbd> anomaly · <kbd>LMB/RMB</kbd> punch · <kbd>F</kbd> headbutt · <kbd>SHIFT</kbd> brace · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu',
+  core: '<kbd>WASD</kbd> run · <kbd>1</kbd> base strike · <kbd>Z</kbd> anomaly power · <kbd>LMB/RMB</kbd> punch · <kbd>F</kbd> headbutt · <kbd>SHIFT</kbd> brace · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu',
 };
 let CONTROLS = CONTROLS_LEGEND.cell;
 
@@ -377,7 +377,9 @@ function handleActions() {
   // Temporary test powers are only available in Section Four, where the anomaly is introduced.
   // This prevents number keys from hijacking the opening restraint sequence.
   if (director.section >= 4) {
-    for (const [key, slot] of [['Digit1', 1], ['Digit2', 2], ['Digit3', 3], ['Digit4', 4], ['Digit5', 5]]) {
+    // Z activates the anomaly power; number keys must not trigger it.
+    if (i.pressed('KeyZ')) catalyst.activateTestPower(2);
+    for (const [key, slot] of [['Digit1', 1], ['Digit3', 3], ['Digit4', 4], ['Digit5', 5]]) {
       if (i.pressed(key)) catalyst.activateTestPower(slot);
     }
   }
