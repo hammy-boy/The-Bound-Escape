@@ -105,13 +105,11 @@ export class Catalyst {
     this._spawnPowerAnimation(slot, def);
     if (slot === 1) {
       this.g.player.headWorld(_p).setY(1.1);
-      const target = this.nearest(12);
+      const target = this.crosshairTarget(30, 0.72);
       this.g.addTrauma(1.7);
       this.g.flashV = 0.9;
       this.g.env.burst(_p, 52, def.rgb, 2.3, 8.5, 0.55, 0.055);
       this.g.audio.shockwave(1);
-      // The nova still has an outward shockwave, but its main attack is a
-      // visible crimson bolt that launches from the player and strikes a target.
       this._concuss(_p, 5.0, { force: 3.2, shatter: true, damage: 0.35, skip: target });
       if (target && !target.ko) {
         target.point('chest', _q);
@@ -124,6 +122,11 @@ export class Catalyst {
         target.setMode('stagger');
         this._strike(target, 1.25, 'chest');
         this.g.env.burst(_q, 30, def.rgb, 1.4, 5.8, 0.45, 0.045);
+      } else {
+        const camera = this.g.camera;
+        const origin = camera.getWorldPosition(new THREE.Vector3());
+        const direction = camera.getWorldDirection(new THREE.Vector3());
+        this._spawnBloodfireZap(origin, origin.clone().addScaledVector(direction, 18));
       }
     } else if (slot === 2) {
       const p = this.g.player.root.position;
@@ -715,6 +718,27 @@ export class Catalyst {
   nextStrike() {
     this._alt = this._alt === 'left' ? 'right' : 'left';
     return this._alt;
+  }
+
+  crosshairTarget(maxDist = 30, tolerance = 0.72) {
+    const camera = this.g.camera;
+    const origin = camera.getWorldPosition(new THREE.Vector3());
+    const direction = camera.getWorldDirection(new THREE.Vector3()).normalize();
+    let best = null;
+    let bestAlong = maxDist;
+    const chest = new THREE.Vector3();
+    for (const enemy of this.g.fighters) {
+      if (enemy.ko || enemy.mode === 'offscreen' || !enemy.root.visible) continue;
+      enemy.point('chest', chest);
+      const toChest = chest.clone().sub(origin);
+      const along = toChest.dot(direction);
+      if (along <= 0 || along > bestAlong) continue;
+      const closest = origin.clone().addScaledVector(direction, along);
+      if (closest.distanceTo(chest) > tolerance) continue;
+      best = enemy;
+      bestAlong = along;
+    }
+    return best;
   }
 
   nearest(maxDist = 6.5) {
