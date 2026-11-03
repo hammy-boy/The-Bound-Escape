@@ -257,6 +257,7 @@ let CONTROLS = CONTROLS_LEGEND.cell;
 for (const g of game.fighters) g.onEvent = (n, p, guard) => director.onGuardEvent(n, p, guard);
 player.onWhiff = () => { game.stats.misses++; audio.whoosh(0.45); catalyst.onWhiff(); };
 player.onTaken = () => catalyst.onTaken();
+player.onDamageGuard = (amount) => catalyst.absorbDamage(amount);
 player.onStep = (amp) => { if (game.envName !== 'cell') audio.metalStep(0.45 + amp * 0.5); };
 
 // ---------------- combat resolution ----------------
