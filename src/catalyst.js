@@ -69,6 +69,7 @@ export class Catalyst {
     this.locks = [];          // {g, t, dur, lift} — zero gravity, temporarily
     this._alt = 'left';
     this._wasReady = false;
+    this.powerVfx = [];
   }
 
   // Number keys select a test power; Z is the only activation key.
@@ -97,6 +98,7 @@ export class Catalyst {
     this._wasReady = true;
     this.g.hud.anomalyLabel(def);
     this.g.hud.anomaly(1, true);
+    this._spawnPowerAnimation(slot, def);
     if (slot === 1) {
       this.g.player.headWorld(_p).setY(1.1);
       this.g.addTrauma(1.7);
@@ -127,6 +129,93 @@ export class Catalyst {
       this._plasma();
     }
     return true;
+  }
+
+  // Short, animated 3D power flourishes. These are separate from the instant
+  // gameplay effects below, so each ability has a visible wind-up/release.
+  _spawnPowerAnimation(slot, def) {
+    const g = this.g;
+    const origin = g.player.root.position.clone();
+    const group = new THREE.Group();
+    group.position.copy(origin);
+    g.scene.add(group);
+
+    const makeRing = (radius, tube, y, opacity = 0.9) => {
+      const material = new THREE.MeshBasicMaterial({
+        color: def.hex, transparent: true, opacity,
+        blending: THREE.AdditiveBlending, depthWrite: false,
+      });
+      const mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 8, 48), material);
+      mesh.rotation.x = Math.PI / 2;
+      mesh.position.y = y;
+      group.add(mesh);
+      return mesh;
+    };
+    const rings = [];
+    const coreMat = new THREE.MeshBasicMaterial({
+      color: def.hex, transparent: true, opacity: 0.85,
+      blending: THREE.AdditiveBlending, depthWrite: false,
+    });
+    const core = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), coreMat);
+    core.position.y = slot === 3 ? 0.9 : 1.15;
+    group.add(core);
+
+    if (slot === 1) { // Bloodfire: rising ember core and expanding fire rings
+      rings.push(makeRing(0.55, 0.09, 0.12), makeRing(0.8, 0.045, 0.75, 0.65));
+      core.scale.set(1.5, 2.2, 1.5);
+    } else if (slot === 2) { // Stasis: suspended, rotating containment hoops
+      for (let i = 0; i < 3; i++) {
+        const ring = makeRing(0.75 + i * 0.25, 0.035, 0.55 + i * 0.38, 0.75);
+        ring.rotation.y = i * Math.PI / 3;
+        rings.push(ring);
+      }
+      core.scale.setScalar(0.65);
+    } else if (slot === 3) { // Bloodwell: healing pulse rising from the player
+      rings.push(makeRing(0.45, 0.07, 0.15), makeRing(0.7, 0.045, 0.55, 0.6));
+      core.scale.set(1.2, 1.8, 1.2);
+    } else if (slot === 4) { // Kinetic: hard, fast shockwave rings
+      rings.push(makeRing(0.35, 0.11, 0.1), makeRing(0.65, 0.07, 0.18), makeRing(0.95, 0.04, 0.25));
+      core.scale.setScalar(0.45);
+    } else { // Matter: bright plasma charge around the player's upper body
+      rings.push(makeRing(0.42, 0.055, 0.95), makeRing(0.58, 0.035, 1.35, 0.6));
+      core.position.y = 1.25;
+      core.scale.set(1.7, 1.7, 1.7);
+    }
+
+    this.powerVfx.push({ group, rings, core, coreMat, t: 0, dur: slot === 5 ? 1.1 : 0.82, slot });
+    while (this.powerVfx.length > 8) {
+      const old = this.powerVfx.shift();
+      g.scene.remove(old.group);
+    }
+  }
+
+  _updatePowerAnimations(dt) {
+    for (let i = this.powerVfx.length - 1; i >= 0; i--) {
+      const fx = this.powerVfx[i];
+      fx.t += dt;
+      const p = Math.min(1, fx.t / fx.dur);
+      const ease = 1 - Math.pow(1 - p, 3);
+      fx.group.rotation.y += dt * (fx.slot === 2 ? 2.8 : fx.slot === 1 ? -1.8 : 1.2);
+      fx.group.position.y = Math.sin(p * Math.PI) * (fx.slot === 3 ? 0.65 : 0.22);
+      for (let j = 0; j < fx.rings.length; j++) {
+        const ring = fx.rings[j];
+        const spread = fx.slot === 2 ? 1 + p * 0.18 : 1 + ease * (fx.slot === 4 ? 5.5 : 3.2);
+        ring.scale.setScalar(spread * (1 + j * 0.08));
+        ring.material.opacity = Math.max(0, (1 - p) * (j === 0 ? 0.95 : 0.65));
+      }
+      const pulse = 0.7 + Math.sin(p * Math.PI * 5) * 0.25;
+      fx.core.scale.multiplyScalar(1); // keep the authored shape; animate via scalar below
+      fx.core.material.opacity = Math.max(0, (1 - p) * pulse);
+      fx.core.rotation.y += dt * 3;
+      if (p >= 1) {
+        this.g.scene.remove(fx.group);
+        fx.group.traverse((o) => {
+          o.geometry?.dispose();
+          if (o.material) o.material.dispose();
+        });
+        this.powerVfx.splice(i, 1);
+      }
+    }
   }
 
   // ---------- persistence ----------
@@ -419,6 +508,7 @@ export class Catalyst {
 
   // ---------- frame ----------
   update(dt) {
+    this._updatePowerAnimations(dt);
     if (!this.unlocked) return;
     const g = this.g;
 
