@@ -73,6 +73,7 @@ export class Catalyst {
     this.enemyZaps = [];
     this.floorDebris = [];
     this.forceFields = [];
+    this.forceWalls = [];
   }
 
   // Number keys select a test power; Z is the only activation key.
@@ -132,7 +133,7 @@ export class Catalyst {
       }
       this.g.env.burst(this.g.player.headWorld(_p).setY(1.1), 30, def.rgb, 1.2, 4.5, 0.8, 0.045);
     } else if (slot === 3) {
-      this._spawnForceField();
+      this._spawnForceWall();
     } else if (slot === 4) {
       this.g.player.headWorld(_p).setY(1.1);
       this.g.addTrauma(1.8);
@@ -357,6 +358,80 @@ export class Catalyst {
     this.g.addTrauma(0.25);
   }
 
+  _spawnForceWall() {
+    const player = this.g.player;
+    const forward = player.forwardWorld(new THREE.Vector3());
+    const right = new THREE.Vector3(-forward.z, 0, forward.x);
+    const center = player.root.position.clone().addScaledVector(forward, 2.15);
+    center.y = 1.25;
+    const group = new THREE.Group();
+    group.position.copy(center);
+    group.rotation.y = Math.atan2(-forward.x, -forward.z);
+
+    const wallMat = new THREE.MeshBasicMaterial({
+      color: 0xff65d5, transparent: true, opacity: 0,
+      side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(5.8, 2.5), wallMat);
+    panel.renderOrder = 22;
+    group.add(panel);
+    const edgeMat = new THREE.MeshBasicMaterial({
+      color: 0xffb5ec, transparent: true, opacity: 0,
+      depthWrite: false, blending: THREE.AdditiveBlending,
+    });
+    const frame = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(5.85, 2.55, 0.08)), edgeMat);
+    frame.renderOrder = 23;
+    group.add(frame);
+    const bars = [];
+    for (let i = 0; i < 5; i++) {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.025, 2.3, 0.035), edgeMat.clone());
+      bar.position.x = -2.3 + i * 1.15;
+      group.add(bar);
+      bars.push(bar);
+    }
+    this.g.scene.add(group);
+    this.forceWalls.push({ group, center, forward, right, panel, frame, bars, t: 0, dur: 4.2, hitFlash: 0 });
+    this.g.env.burst(center.clone(), 34, [1, 0.32, 0.82], 1.3, 4.2, 0.75, 0.04);
+    this.g.addTrauma(0.2);
+  }
+
+  _updateForceWalls(dt) {
+    for (let i = this.forceWalls.length - 1; i >= 0; i--) {
+      const wall = this.forceWalls[i];
+      wall.t += dt;
+      const fadeIn = Math.min(1, wall.t / 0.28);
+      const fadeOut = Math.min(1, Math.max(0, (wall.dur - wall.t) / 0.55));
+      const alpha = fadeIn * fadeOut;
+      const flash = wall.hitFlash || 0;
+      wall.panel.material.opacity = (0.16 + flash * 0.22) * alpha;
+      wall.frame.material.opacity = (0.9 + flash * 0.1) * alpha;
+      for (const bar of wall.bars) bar.material.opacity = (0.42 + flash * 0.5) * alpha;
+      wall.hitFlash = Math.max(0, flash - dt * 3.2);
+
+      // Enemies that reach the panel are stopped at its face and stagger.
+      for (const enemy of this.g.fighters) {
+        if (enemy.ko || enemy.mode === 'offscreen' || !enemy.root.visible) continue;
+        const dx = enemy.root.position.x - wall.center.x;
+        const dz = enemy.root.position.z - wall.center.z;
+        const depth = dx * wall.forward.x + dz * wall.forward.z;
+        const lateral = dx * wall.right.x + dz * wall.right.z;
+        if (Math.abs(lateral) > 2.95 || Math.abs(depth) > 0.72) continue;
+        enemy.root.position.x += wall.forward.x * (depth >= 0 ? 0.16 : -0.16);
+        enemy.root.position.z += wall.forward.z * (depth >= 0 ? 0.16 : -0.16);
+        wall.hitFlash = 1;
+        if (!enemy.scout && enemy.mode !== 'stagger') enemy.setMode('stagger');
+      }
+      if (wall.t >= wall.dur) {
+        this.g.scene.remove(wall.group);
+        wall.group.traverse((o) => {
+          o.geometry?.dispose();
+          if (o.material) o.material.dispose();
+        });
+        this.forceWalls.splice(i, 1);
+      }
+    }
+  }
+
   /** Pink Aegis absorbs incoming hits for as long as its field remains active. */
   absorbDamage(amount) {
     const fx = this.forceFields.find((field) => field.t < field.dur);
@@ -496,6 +571,7 @@ export class Catalyst {
     this._updateBloodfireZaps(dt);
     this._updateFloorDebris(dt);
     this._updateForceFields(dt);
+    this._updateForceWalls(dt);
     for (let i = this.powerVfx.length - 1; i >= 0; i--) {
       const fx = this.powerVfx[i];
       fx.t += dt;
@@ -575,6 +651,11 @@ export class Catalyst {
     this.def = null;
     this.charge = 0; this.combo = 0; this.comboT = 0; this.plasma = 0;
     this.shoves.length = 0; this.locks.length = 0;
+    for (const wall of this.forceWalls) {
+      this.g.scene.remove(wall.group);
+      wall.group.traverse((o) => { o.geometry?.dispose(); if (o.material) o.material.dispose(); });
+    }
+    this.forceWalls.length = 0;
     for (const fx of this.forceFields) {
       fx.root.remove(fx.field);
       fx.field.traverse((o) => { o.geometry?.dispose(); if (o.material) o.material.dispose(); });
