@@ -127,6 +127,7 @@ export class Catalyst {
     } else if (slot === 5) {
       this._spawnFloorBreak();
       this._plasma();
+      this._concuss(_p, 5.2, { force: 3.4, shatter: true, damage: 1.15 });
     }
     return true;
   }
@@ -287,6 +288,7 @@ export class Catalyst {
   _spawnFloorBreak() {
     const scene = this.g.scene;
     const origin = this.g.player.root.position;
+    this.g.env.breakFloor?.(origin, 1.15);
     const debris = [];
     const palette = [0x77736c, 0x625f59, 0x938b7d, 0x4d4b48];
     const count = 26;
