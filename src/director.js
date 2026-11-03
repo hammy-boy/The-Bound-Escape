@@ -533,14 +533,28 @@ export class Director {
     this.opts.threat = null;
     const liftPos = this.silo.elevator.position;
     const distance = Math.hypot(p.root.position.x - liftPos.x, p.root.position.z - liftPos.z);
-    if (distance < 2.3 && this.input.pressed('KeyE')) {
+    const liftData = this.silo.elevator.userData;
+    if (!liftData.cargoPressed && distance < 3.0) {
+      this.prompt('<b>E</b> — ENTER FREIGHT ELEVATOR');
+    } else if (!liftData.cargoPressed && distance >= 3.0) {
+      this.prompt(null);
+    }
+    if (!liftData.cargoPressed && distance < 3.0 && this.input.pressed('KeyE')) {
+      liftData.cargoPressed = true;
+      liftData.cargoGlow.intensity = 2.2;
+      liftData.cargoButtonMat.emissive.setHex(0xff7a22);
+      liftData.cargoButtonMat.emissiveIntensity = 0.65;
+      for (const door of liftData.cargoDoors) {
+        door.material.emissive.setHex(0x8a3510);
+        door.material.emissiveIntensity = 0.28;
+      }
       this.prompt(null);
       this.opts.moveSpeed = 0;
       this.audio.clang();
-      this.g.addTrauma(0.35);
-      this.say('', 'The lift gate rattles shut behind you. Somewhere below, the cargo winch starts turning.', 4.8);
+      this.g.addTrauma(0.22);
+      this.say('', 'The elevator control lights up. The heavy doors begin to close.', 4.8);
       this.after(2.8, () => this.announce('FREIGHT LIFT OCCUPIED. DESCENT CONTROL TRANSFERRED TO LOWER CARGO.', 4.2, 'THE FACILITY · INTERCOM'));
-      this.after(5.2, () => this.think('You grip the wet rail and look down through the grating. The city is somewhere under the smog. The lift has not started falling yet.', 5));
+      this.after(5.2, () => this.think('You grip the wet rail as the freight lift prepares to descend.', 5));
     }
   }
 
