@@ -502,6 +502,48 @@ export class Director {
     });
   }
 
+  // ============ SECTION FIVE · CARGO ENTRY ===============================
+  ph_cargo(dt) {
+    const p = this.player;
+    if (dt === 0) {
+      this.section = 5;
+      this.g.setEnv('silo');
+      this.opts.canLook = true;
+      this.opts.canLean = true;
+      this.opts.moveSpeed = 3.2;
+      this.opts.threat = null;
+      this.opts.clamp = (pos) => this.silo.clamp(pos);
+      this.silo.platformOnly = true;
+      this.silo.setVisible(true);
+      this.silo.elevator.visible = true;
+      this.silo.elevator.position.set(0, 0, 0);
+      this.silo.elevator.userData.shut = 0;
+      this.silo.elevator.userData.closing = false;
+      p.root.position.set(0, 0, 5.2);
+      p.aimYaw(Math.PI);
+      this.hud.darkness(1);
+      this.hud.blur(8);
+      this.after(0.5, () => this.hud.darkness(0));
+      this.after(1.4, () => this.hud.blur(0));
+      this.announce('CHAPTER ONE · SECTION FIVE — CARGO ENTRY', 4.2, 'THE FACILITY · INTERCOM');
+      this.after(2.2, () => this.think('The gate opens onto a freight gantry. Below it, the cargo lift waits with its doors half-open. The air smells of rain, hot brakes and diesel.', 5.4));
+      this.after(7.2, () => this.prompt('<b>W A S D</b> — CROSS THE GANTRY  ·  <b>E</b> — BOARD THE FREIGHT LIFT'));
+      return;
+    }
+    this.opts.threat = null;
+    const liftPos = this.silo.elevator.position;
+    const distance = Math.hypot(p.root.position.x - liftPos.x, p.root.position.z - liftPos.z);
+    if (distance < 2.3 && this.input.pressed('KeyE')) {
+      this.prompt(null);
+      this.opts.moveSpeed = 0;
+      this.audio.clang();
+      this.g.addTrauma(0.35);
+      this.say('', 'The lift gate rattles shut behind you. Somewhere below, the cargo winch starts turning.', 4.8);
+      this.after(2.8, () => this.announce('FREIGHT LIFT OCCUPIED. DESCENT CONTROL TRANSFERRED TO LOWER CARGO.', 4.2, 'THE FACILITY · INTERCOM'));
+      this.after(5.2, () => this.think('You grip the wet rail and look down through the grating. The city is somewhere under the smog. The lift has not started falling yet.', 5));
+    }
+  }
+
   // ============ SECTION THREE · THE TURBINE CROSSING =======================
   //
   // The ring is behind you and the door is shutting. Everything the facility
@@ -1315,7 +1357,7 @@ export class Director {
     this.after(1.6, () => this.say('', 'The last one stops moving. Six pods open, one door open, and the hall is only a hall again.', 4.8));
     this.after(3.6, () => this.announce('GATE SEVEN RELEASED. CARGO GANTRY UNSEALED.', 4.2, 'THE FACILITY · INTERCOM'));
     this.after(5.6, () => this.think('Cold air out of there, and diesel. A way out — and not the way to them.', 5));
-    this.after(7.8, () => this._final());
+    this.after(7.8, () => { this.section = 5; this.g.setEnv('silo'); this.goto('cargo'); });
   }
 
   // ---------- Section Two machinery ----------
