@@ -28,6 +28,14 @@ export const RARITIES = [
   },
 ];
 
+const TEST_POWERS = {
+  1: { key: 'inferno', tier: 'EPIC', hex: '#ff342e', rgb: [1, 0.08, 0.04], name: 'BLOODFIRE NOVA', line: 'Crimson fireburst.' },
+  2: { key: 'stasis', tier: 'RARE', hex: '#a855f7', rgb: [0.66, 0.33, 0.97], name: 'RIFT STASIS', line: 'Lock nearby threats in a rift.' },
+  3: { key: 'bloodwell', tier: 'RARE', hex: '#ff4f6d', rgb: [1, 0.18, 0.32], name: 'BLOODWELL SURGE', line: 'Restore resolve and release a crimson shockwave.' },
+  4: { key: 'kinetic', tier: 'COMMON', hex: '#a8a29a', rgb: [0.68, 0.66, 0.63], name: 'KINETIC SHOCKWAVE', line: 'A powerful concussion blast.' },
+  5: { key: 'matter', tier: 'MYTHIC', hex: '#ffb62e', rgb: [1, 0.71, 0.18], name: 'MATTER DISINTEGRATION', line: 'Plasma fists.' },
+};
+
 const MINOR = ['kinetic', 'quantum'];
 
 /** floored = the finale roll: the table is real, but the first pull is not allowed
@@ -63,16 +71,23 @@ export class Catalyst {
     this._wasReady = false;
   }
 
+  // Number keys select a test power; Z is the only activation key.
+  selectTestPower(slot) {
+    const def = TEST_POWERS[slot];
+    if (!def) return false;
+    this.selectedTestPower = slot;
+    this.g.hud.anomalyLabel(def);
+    return true;
+  }
+
+  activateSelectedTestPower() {
+    if (!this.selectedTestPower) return false;
+    return this.activateTestPower(this.selectedTestPower);
+  }
+
   // Temporary test powers: never persist test selections into a normal run.
   activateTestPower(slot) {
-    const powers = {
-      1: { key: 'inferno', tier: 'EPIC', hex: '#ff342e', rgb: [1, 0.08, 0.04], name: 'BLOODFIRE NOVA', line: 'Crimson fireburst.' },
-      2: { key: 'stasis', tier: 'RARE', hex: '#a855f7', rgb: [0.66, 0.33, 0.97], name: 'RIFT STASIS', line: 'Lock nearby threats in a rift.' },
-      3: { key: 'bloodwell', tier: 'RARE', hex: '#ff4f6d', rgb: [1, 0.18, 0.32], name: 'BLOODWELL SURGE', line: 'Restore resolve and release a crimson shockwave.' },
-      4: { key: 'kinetic', tier: 'COMMON', hex: '#a8a29a', rgb: [0.68, 0.66, 0.63], name: 'KINETIC SHOCKWAVE', line: 'A powerful concussion blast.' },
-      5: { key: 'matter', tier: 'MYTHIC', hex: '#ffb62e', rgb: [1, 0.71, 0.18], name: 'MATTER DISINTEGRATION', line: 'Plasma fists.' },
-    };
-    const def = powers[slot];
+    const def = TEST_POWERS[slot];
     if (!def) return false;
     if (!this.testMode) this.preTestSnapshot = this.def ? { key: this.def.key, charge: this.charge } : null;
     this.testMode = true;
