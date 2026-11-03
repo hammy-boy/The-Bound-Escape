@@ -365,7 +365,7 @@ export class Catalyst {
     const player = this.g.player;
     const forward = player.forwardWorld(new THREE.Vector3());
     const right = new THREE.Vector3(-forward.z, 0, forward.x);
-    const center = player.root.position.clone().addScaledVector(forward, 7.5);
+    const center = player.root.position.clone().addScaledVector(forward, 4.8);
     center.y = 1.25;
     const group = new THREE.Group();
     group.position.copy(center);
@@ -393,7 +393,24 @@ export class Catalyst {
       bars.push(bar);
     }
     this.g.scene.add(group);
-    this.forceWalls.push({ group, center, forward, right, panel, frame, bars, hitEnemies: new Set(), t: 0, dur: 4.2, hitFlash: 0 });
+    const wall = { group, center, forward, right, panel, frame, bars, hitEnemies: new Set(), t: 0, dur: 4.2, hitFlash: 0 };
+    this.forceWalls.push(wall);
+
+    // Launch enemies in front of the player directly towards the new wall.
+    // This is the attack part of Pink Aegis; the panel then catches them.
+    for (const enemy of this.g.fighters) {
+      if (enemy.ko || enemy.mode === 'offscreen' || !enemy.root.visible) continue;
+      const dx = enemy.root.position.x - player.root.position.x;
+      const dz = enemy.root.position.z - player.root.position.z;
+      const ahead = dx * forward.x + dz * forward.z;
+      const lateral = dx * right.x + dz * right.z;
+      if (ahead < 0.4 || ahead > 8.5 || Math.abs(lateral) > 2.7) continue;
+      const toWallX = center.x - enemy.root.position.x;
+      const toWallZ = center.z - enemy.root.position.z;
+      const length = Math.hypot(toWallX, toWallZ) || 1;
+      this._shove(enemy, (toWallX / length) * 22, (toWallZ / length) * 22);
+    }
+
     this.g.env.burst(center.clone(), 34, [1, 0.32, 0.82], 1.3, 4.2, 0.75, 0.04);
     this.g.addTrauma(0.2);
   }
@@ -421,23 +438,13 @@ export class Catalyst {
         const lateral = dx * wall.right.x + dz * wall.right.z;
         if (Math.abs(lateral) > 2.95 || Math.abs(depth) > 0.9) continue;
 
-        // Knock enemies radially away from the PLAYER, not merely away
-        // from whichever face of the wall they happen to touch.
-        const playerPos = this.g.player.root.position;
-        let pushX = enemy.root.position.x - playerPos.x;
-        let pushZ = enemy.root.position.z - playerPos.z;
-        const pushLength = Math.hypot(pushX, pushZ);
-        if (pushLength > 0.001) {
-          pushX /= pushLength;
-          pushZ /= pushLength;
-        } else {
-          pushX = wall.forward.x;
-          pushZ = wall.forward.z;
-        }
-        // Clear the panel, then carry the enemy firmly away from the player.
-        enemy.root.position.x += pushX * 0.32;
-        enemy.root.position.z += pushZ * 0.32;
-        this._shove(enemy, pushX * 18, pushZ * 18);
+        // Stop the launched enemy on the PLAYER side of the panel so
+        // the impact reads as a hit against the wall, not passing through it.
+        const stopDepth = -0.55;
+        const correction = depth - stopDepth;
+        enemy.root.position.x -= wall.forward.x * correction;
+        enemy.root.position.z -= wall.forward.z * correction;
+        this.shoves = this.shoves.filter((shove) => shove.g !== enemy);
         wall.hitEnemies.add(enemy);
         wall.hitFlash = 1;
         if (!enemy.scout) enemy.setMode('stagger');
