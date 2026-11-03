@@ -250,7 +250,7 @@ const CONTROLS_LEGEND = {
   cell: '<kbd>WASD</kbd> rock · <kbd>LMB/RMB</kbd> punch · <kbd>F</kbd> headbutt · <kbd>E</kbd> chair · <kbd>Z</kbd> release restraints · <kbd>SHIFT</kbd> brace · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu · <kbd>H</kbd> hide',
   ring: '<kbd>WASD</kbd> run · <kbd>SHIFT</kbd> brace · <kbd>LMB/RMB</kbd> strike · <kbd>E</kbd> interact · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu · <kbd>H</kbd> hide',
   turbine: '<kbd>WASD</kbd> run · <kbd>LMB/RMB</kbd> strike only when they miss · <kbd>F</kbd> headbutt · <kbd>SPACE</kbd> jump · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu · <kbd>H</kbd> hide',
-  core: '<kbd>WASD</kbd> run · <kbd>Z</kbd> Rift Stasis · <kbd>1</kbd> Bloodfire · <kbd>3</kbd> Bloodwell · <kbd>4</kbd> Kinetic · <kbd>5</kbd> Matter · <kbd>LMB/RMB</kbd> punch · <kbd>F</kbd> headbutt · <kbd>SHIFT</kbd> brace · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu',
+  core: '<kbd>WASD</kbd> run · <kbd>1–5</kbd> select anomaly · <kbd>Z</kbd> activate selected power · <kbd>LMB/RMB</kbd> punch · <kbd>F</kbd> headbutt · <kbd>SHIFT</kbd> brace · <kbd>MOUSE</kbd> look · <kbd>ESC</kbd> menu',
 };
 let CONTROLS = CONTROLS_LEGEND.cell;
 
@@ -374,15 +374,15 @@ function resolveHits() {
 // ---------------- actions ----------------
 function handleActions() {
   const i = input;
-  // In Section Four, Z activates Rift Stasis. The other anomaly powers can
-  // be tested with 1, 3, 4 and 5; key 2 is deliberately not used.
+  // In Section Four, number keys select an anomaly power and Z activates it.
   // Earlier in the opening, Z remains reserved for releasing the restraints.
   if (director.section >= 4) {
-    if (i.pressed('KeyZ')) catalyst.activateTestPower(2); // Rift Stasis
-    if (i.pressed('Digit1')) catalyst.activateTestPower(1); // Bloodfire Nova
-    if (i.pressed('Digit3')) catalyst.activateTestPower(3); // Bloodwell Surge
-    if (i.pressed('Digit4')) catalyst.activateTestPower(4); // Kinetic Shockwave
-    if (i.pressed('Digit5')) catalyst.activateTestPower(5); // Matter Disintegration
+    if (i.pressed('Digit1')) catalyst.selectTestPower(1);
+    if (i.pressed('Digit2')) catalyst.selectTestPower(2);
+    if (i.pressed('Digit3')) catalyst.selectTestPower(3);
+    if (i.pressed('Digit4')) catalyst.selectTestPower(4);
+    if (i.pressed('Digit5')) catalyst.selectTestPower(5);
+    if (i.pressed('KeyZ')) catalyst.activateSelectedTestPower();
   }
   if (i.pressed('MB_LEFT')) player.startPunch('left');
   if (i.pressed('MB_RIGHT')) player.startPunch('right');
