@@ -421,13 +421,22 @@ export class Catalyst {
         const lateral = dx * wall.right.x + dz * wall.right.z;
         if (Math.abs(lateral) > 2.95 || Math.abs(depth) > 0.9) continue;
 
-        const side = depth >= 0 ? 1 : -1;
-        const pushX = wall.forward.x * side;
-        const pushZ = wall.forward.z * side;
-        // Move them clear of the panel immediately, then let the shove carry
-        // them properly backwards with a strong, decaying knockback.
-        enemy.root.position.x += pushX * 0.28;
-        enemy.root.position.z += pushZ * 0.28;
+        // Knock enemies radially away from the PLAYER, not merely away
+        // from whichever face of the wall they happen to touch.
+        const playerPos = this.g.player.root.position;
+        let pushX = enemy.root.position.x - playerPos.x;
+        let pushZ = enemy.root.position.z - playerPos.z;
+        const pushLength = Math.hypot(pushX, pushZ);
+        if (pushLength > 0.001) {
+          pushX /= pushLength;
+          pushZ /= pushLength;
+        } else {
+          pushX = wall.forward.x;
+          pushZ = wall.forward.z;
+        }
+        // Clear the panel, then carry the enemy firmly away from the player.
+        enemy.root.position.x += pushX * 0.32;
+        enemy.root.position.z += pushZ * 0.32;
         this._shove(enemy, pushX * 18, pushZ * 18);
         wall.hitEnemies.add(enemy);
         wall.hitFlash = 1;
