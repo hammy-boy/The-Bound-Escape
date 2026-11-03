@@ -56,6 +56,7 @@ export class Player {
     this.roll = 0;
     this.onStep = null;
     this.onTaken = null;
+    this.onDamageGuard = null;
 
     // --- armature -----------------------------------------------------
     this.root = new THREE.Group();              // chair + anchored body, world
@@ -541,6 +542,7 @@ export class Player {
    *  the same tenth of a second, and that is a queue, not a fight. Pass 0 for the
    *  kinds of damage that are not coming from somebody's fist. */
   damage(amount, grace = 0.9) {
+    if (this.onDamageGuard?.(amount)) return false;
     if (grace > 0 && this.invuln > 0) return false;
     this.invuln = grace;
     this.resolve = Math.max(0, this.resolve - amount);
