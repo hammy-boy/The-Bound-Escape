@@ -31,7 +31,7 @@ export const RARITIES = [
 const TEST_POWERS = {
   1: { key: 'inferno', tier: 'EPIC', hex: '#ff342e', rgb: [1, 0.08, 0.04], name: 'BLOODFIRE NOVA', line: 'Crimson fireburst.' },
   2: { key: 'stasis', tier: 'RARE', hex: '#a855f7', rgb: [0.66, 0.33, 0.97], name: 'RIFT STASIS', line: 'Lock nearby threats in a rift.' },
-  3: { key: 'bloodwell', tier: 'RARE', hex: '#ff4f6d', rgb: [1, 0.18, 0.32], name: 'BLOODWELL SURGE', line: 'Restore resolve and release a crimson shockwave.' },
+  3: { key: 'pink-aegis', tier: 'RARE', hex: '#ff65d5', rgb: [1, 0.32, 0.82], name: 'PINK AEGIS', line: 'Surround yourself with a protective pink force field.' },
   4: { key: 'kinetic', tier: 'COMMON', hex: '#a8a29a', rgb: [0.68, 0.66, 0.63], name: 'KINETIC SHOCKWAVE', line: 'A powerful concussion blast.' },
   5: { key: 'matter', tier: 'MYTHIC', hex: '#ffb62e', rgb: [1, 0.71, 0.18], name: 'MATTER DISINTEGRATION', line: 'Plasma fists.' },
 };
@@ -71,6 +71,7 @@ export class Catalyst {
     this._wasReady = false;
     this.powerVfx = [];
     this.floorDebris = [];
+    this.forceFields = [];
   }
 
   // Number keys select a test power; Z is the only activation key.
@@ -115,10 +116,7 @@ export class Catalyst {
       }
       this.g.env.burst(this.g.player.headWorld(_p).setY(1.1), 30, def.rgb, 1.2, 4.5, 0.8, 0.045);
     } else if (slot === 3) {
-      this.g.player.resolve = Math.min(3, (this.g.player.resolve || 0) + 1);
-      this.g.player.headWorld(_p).setY(1.1);
-      this.g.env.burst(_p, 38, def.rgb, 1.5, 5.5, 0.75, 0.05);
-      this._concuss(_p, 3.8, { force: 2.0, damage: 0.35 });
+      this._spawnForceField();
     } else if (slot === 4) {
       this.g.player.headWorld(_p).setY(1.1);
       this.g.addTrauma(1.8);
@@ -173,8 +171,8 @@ export class Catalyst {
         rings.push(ring);
       }
       core.scale.setScalar(0.55);
-    } else if (slot === 3) { // Bloodwell Surge: rising restorative pulse
-      rings.push(makeRing(0.16, 0.035), makeRing(0.3, 0.02, -0.02, 0.65));
+    } else if (slot === 3) { // Pink Aegis: a protective pink energy pulse
+      rings.push(makeRing(0.2, 0.035), makeRing(0.34, 0.02, -0.02, 0.65));
       core.scale.set(0.85, 1.5, 0.65);
     } else if (slot === 4) { // Kinetic Shockwave: three rapid concentric impact waves
       rings.push(makeRing(0.12, 0.04), makeRing(0.25, 0.03), makeRing(0.39, 0.018));
@@ -198,6 +196,91 @@ export class Catalyst {
         o.geometry?.dispose();
         if (o.material) o.material.dispose();
       });
+    }
+  }
+
+  _spawnForceField() {
+    const root = this.g.player.root;
+    const field = new THREE.Group();
+    field.position.set(0, 0.95, 0);
+
+    const shell = new THREE.Mesh(
+      new THREE.SphereGeometry(0.92, 32, 24),
+      new THREE.MeshBasicMaterial({
+        color: 0xff65d5,
+        transparent: true,
+        opacity: 0.2,
+        side: THREE.DoubleSide,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    shell.scale.set(1, 1.22, 1);
+    shell.renderOrder = 18;
+    field.add(shell);
+
+    const outline = new THREE.Mesh(
+      new THREE.SphereGeometry(0.925, 20, 14),
+      new THREE.MeshBasicMaterial({
+        color: 0xffa3e8,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.72,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    );
+    outline.scale.copy(shell.scale);
+    outline.renderOrder = 19;
+    field.add(outline);
+
+    const rings = [];
+    for (let i = 0; i < 2; i++) {
+      const ring = new THREE.Mesh(
+        new THREE.TorusGeometry(0.9 + i * 0.035, 0.018, 8, 64),
+        new THREE.MeshBasicMaterial({
+          color: i === 0 ? 0xff65d5 : 0xffb5ec,
+          transparent: true,
+          opacity: 0.8,
+          depthWrite: false,
+          blending: THREE.AdditiveBlending,
+        }),
+      );
+      ring.rotation.set(i * 0.9, 0, i * 0.55);
+      ring.scale.set(1, 1.22, 1);
+      ring.renderOrder = 20;
+      field.add(ring);
+      rings.push(ring);
+    }
+
+    root.add(field);
+    this.forceFields.push({ root, field, shell, outline, rings, t: 0, dur: 4.5 });
+    this.g.player.headWorld(_p).setY(1.1);
+    this.g.env.burst(_p, 28, [1, 0.32, 0.82], 1.1, 3.8, 0.85, 0.04);
+    this.g.addTrauma(0.25);
+  }
+
+  _updateForceFields(dt) {
+    for (let i = this.forceFields.length - 1; i >= 0; i--) {
+      const fx = this.forceFields[i];
+      fx.t += dt;
+      const fade = Math.min(1, Math.max(0, (fx.dur - fx.t) / 0.65));
+      const pulse = 0.94 + Math.sin(fx.t * 7.5) * 0.06;
+      fx.shell.scale.set(1 * pulse, 1.22 * pulse, 1 * pulse);
+      fx.shell.material.opacity = 0.2 * fade;
+      fx.outline.material.opacity = 0.72 * fade;
+      fx.outline.rotation.y += dt * 0.22;
+      fx.rings[0].rotation.y += dt * 0.8;
+      fx.rings[1].rotation.x += dt * 0.65;
+      for (const ring of fx.rings) ring.material.opacity = 0.8 * fade;
+      if (fx.t >= fx.dur) {
+        fx.root.remove(fx.field);
+        fx.field.traverse((o) => {
+          o.geometry?.dispose();
+          if (o.material) o.material.dispose();
+        });
+        this.forceFields.splice(i, 1);
+      }
     }
   }
 
@@ -287,6 +370,7 @@ export class Catalyst {
 
   _updatePowerAnimations(dt) {
     this._updateFloorDebris(dt);
+    this._updateForceFields(dt);
     for (let i = this.powerVfx.length - 1; i >= 0; i--) {
       const fx = this.powerVfx[i];
       fx.t += dt;
@@ -366,6 +450,11 @@ export class Catalyst {
     this.def = null;
     this.charge = 0; this.combo = 0; this.comboT = 0; this.plasma = 0;
     this.shoves.length = 0; this.locks.length = 0;
+    for (const fx of this.forceFields) {
+      fx.root.remove(fx.field);
+      fx.field.traverse((o) => { o.geometry?.dispose(); if (o.material) o.material.dispose(); });
+    }
+    this.forceFields.length = 0;
     this._wasReady = false;
     this.g.hud.anomalyLabel(null);
     for (const s of ['L', 'R']) this.g.player.arms[s].fist.material.emissive.setRGB(0, 0, 0);
