@@ -362,8 +362,23 @@ export class Catalyst {
     const fx = this.forceFields.find((field) => field.t < field.dur);
     if (!fx) return false;
     fx.hitFlash = 1;
-    this.g.addTrauma(0.08);
-    this.g.audio?.shockwave(0.18);
+    this.g.addTrauma(0.12);
+    this.g.audio?.shockwave(0.28);
+
+    // The shield does more than absorb a hit: it sends a short outward pulse
+    // that physically shoves nearby attackers away from the player.
+    const playerPos = this.g.player.root.position;
+    for (const enemy of this.g.fighters) {
+      if (enemy.ko || enemy.mode === 'offscreen' || !enemy.root.visible) continue;
+      const dx = enemy.root.position.x - playerPos.x;
+      const dz = enemy.root.position.z - playerPos.z;
+      const dist = Math.hypot(dx, dz);
+      if (dist > 3.6) continue;
+      const invDist = dist > 0.001 ? 1 / dist : 1;
+      const strength = 6.2 * (1 - dist / 4.2);
+      this._shove(enemy, dx * invDist * strength, dz * invDist * strength);
+      if (!enemy.scout) enemy.setMode('stagger');
+    }
     return true;
   }
 
