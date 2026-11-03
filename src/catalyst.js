@@ -70,6 +70,7 @@ export class Catalyst {
     this._alt = 'left';
     this._wasReady = false;
     this.powerVfx = [];
+    this.enemyZaps = [];
     this.floorDebris = [];
     this.forceFields = [];
   }
@@ -103,11 +104,26 @@ export class Catalyst {
     this._spawnPowerAnimation(slot, def);
     if (slot === 1) {
       this.g.player.headWorld(_p).setY(1.1);
+      const target = this.nearest(12);
       this.g.addTrauma(1.7);
       this.g.flashV = 0.9;
       this.g.env.burst(_p, 52, def.rgb, 2.3, 8.5, 0.55, 0.055);
       this.g.audio.shockwave(1);
-      this._concuss(_p, 5.0, { force: 3.2, shatter: true, damage: 0.9 });
+      // The nova still has an outward shockwave, but its main attack is a
+      // visible crimson bolt that launches from the player and strikes a target.
+      this._concuss(_p, 5.0, { force: 3.2, shatter: true, damage: 0.35, skip: target });
+      if (target && !target.ko) {
+        target.point('chest', _q);
+        this._spawnBloodfireZap(_p, _q);
+        _d.set(target.root.position.x - this.g.player.root.position.x, 0,
+          target.root.position.z - this.g.player.root.position.z);
+        if (_d.lengthSq() < 1e-5) _d.set(0, 0, -1);
+        _d.normalize();
+        this._shove(target, _d.x * 4.2, _d.z * 4.2);
+        target.setMode('stagger');
+        this._strike(target, 1.25, 'chest');
+        this.g.env.burst(_q, 30, def.rgb, 1.4, 5.8, 0.45, 0.045);
+      }
     } else if (slot === 2) {
       const p = this.g.player.root.position;
       for (const enemy of this.g.fighters) {
@@ -197,6 +213,69 @@ export class Catalyst {
         o.geometry?.dispose();
         if (o.material) o.material.dispose();
       });
+    }
+  }
+
+  _spawnBloodfireZap(from, to) {
+    const scene = this.g.scene;
+    const group = new THREE.Group();
+    const start = from.clone().add(new THREE.Vector3(0, 0.08, 0));
+    const end = to.clone().add(new THREE.Vector3(0, 0.08, 0));
+    const delta = end.clone().sub(start);
+    const distance = delta.length();
+    const direction = delta.clone().normalize();
+    const side = new THREE.Vector3(-direction.z, 0, direction.x);
+    const up = new THREE.Vector3(0, 1, 0);
+    const paths = [
+      { color: 0xff241c, radius: 0.035, offset: 0 },
+      { color: 0xff8a42, radius: 0.018, offset: 0.035 },
+      { color: 0x8f0808, radius: 0.014, offset: -0.035 },
+    ];
+    for (const path of paths) {
+      const points = [];
+      const segments = Math.max(5, Math.ceil(distance * 5));
+      for (let i = 0; i <= segments; i++) {
+        const t = i / segments;
+        const point = start.clone().lerp(end, t);
+        if (i !== 0 && i !== segments) {
+          const jitter = (Math.random() - 0.5) * 0.22;
+          point.addScaledVector(side, jitter + path.offset);
+          point.addScaledVector(up, (Math.random() - 0.5) * 0.2);
+        }
+        points.push(point);
+      }
+      const geometry = new THREE.BufferGeometry().setFromPoints(points);
+      const material = new THREE.LineBasicMaterial({
+        color: path.color,
+        transparent: true,
+        opacity: 1,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      });
+      const line = new THREE.Line(geometry, material);
+      line.renderOrder = 30;
+      group.add(line);
+    }
+    scene.add(group);
+    this.enemyZaps.push({ group, t: 0, dur: 0.24 });
+  }
+
+  _updateBloodfireZaps(dt) {
+    for (let i = this.enemyZaps.length - 1; i >= 0; i--) {
+      const zap = this.enemyZaps[i];
+      zap.t += dt;
+      const fade = Math.max(0, 1 - zap.t / zap.dur);
+      zap.group.children.forEach((line) => {
+        line.material.opacity = fade;
+      });
+      if (zap.t >= zap.dur) {
+        this.g.scene.remove(zap.group);
+        zap.group.traverse((obj) => {
+          obj.geometry?.dispose();
+          if (obj.material) obj.material.dispose();
+        });
+        this.enemyZaps.splice(i, 1);
+      }
     }
   }
 
@@ -371,6 +450,7 @@ export class Catalyst {
   }
 
   _updatePowerAnimations(dt) {
+    this._updateBloodfireZaps(dt);
     this._updateFloorDebris(dt);
     this._updateForceFields(dt);
     for (let i = this.powerVfx.length - 1; i >= 0; i--) {
