@@ -121,7 +121,7 @@ const game = {
     const bound = section === 1;
     const silo = this.silo;
     const core = this.core;
-    this.setEnv(section >= 4 ? 'core' : bound ? 'cell' : 'silo');
+    this.setEnv(section === 1 ? 'cell' : section === 4 ? 'core' : 'silo');
     this.world.resetCell();
     for (const d of silo.doors) { d.closing = false; d.sealed = false; d.shut = 0; }
     Object.assign(silo.elevator.userData, { shut: 0, closing: false });
@@ -172,7 +172,7 @@ const game = {
       this.setControls('turbine');
       if (worn) silo.satchel.visible = false;
       silo.platformWorld(p.root.position).setY(0);
-    } else if (section >= 4) {
+    } else if (section === 4) {
       this.audio.startTurbine();       // the intake is still turning overhead
       if (worn) silo.satchel.visible = false;
       core.floorWorld(p.root.position);
