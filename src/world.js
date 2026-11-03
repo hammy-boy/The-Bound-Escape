@@ -32,6 +32,26 @@ export function buildWorld(scene) {
   floor.receiveShadow = true;
   world.add(floor);
 
+  // Persistent impact craters are real openings in the floor geometry.
+  const floorCraterRecords = [];
+  function rebuildFloorWithCraterHoles() {
+    const shape = new THREE.Shape();
+    shape.moveTo(-W / 2, -D / 2);
+    shape.lineTo(W / 2, -D / 2);
+    shape.lineTo(W / 2, D / 2);
+    shape.lineTo(-W / 2, D / 2);
+    shape.closePath();
+    for (const crater of floorCraterRecords) {
+      const hole = new THREE.Path();
+      hole.absarc(crater.x, -crater.z, crater.radius, 0, Math.PI * 2, true);
+      shape.holes.push(hole);
+    }
+    const geometry = new THREE.ShapeGeometry(shape, 48);
+    floor.geometry.dispose();
+    floor.geometry = geometry;
+    floor.geometry.computeVertexNormals();
+  }
+
   const ceil = new THREE.Mesh(new THREE.PlaneGeometry(W, D), matDark);
   ceil.rotation.x = Math.PI / 2; ceil.position.y = H;
   world.add(ceil);
@@ -340,6 +360,32 @@ export function buildWorld(scene) {
     burst(pos, count, color, spread = 0.8, speed = 2, up = 1, size = 0.05) {
       const v = pos instanceof THREE.Vector3 ? pos : new THREE.Vector3(pos.x, pos.y, pos.z);
       burst(v, count, color, spread, speed, up, size);
+    },
+
+    breakFloor(pos, radius = 1.15) {
+      const x = THREE.MathUtils.clamp(pos.x, -W / 2 + radius + 0.1, W / 2 - radius - 0.1);
+      const z = THREE.MathUtils.clamp(pos.z, -D / 2 + radius + 0.1, D / 2 - radius - 0.1);
+      if (floorCraterRecords.some((c) => Math.hypot(c.x - x, c.z - z) < c.radius + radius + 0.35)) return false;
+      floorCraterRecords.push({ x, z, radius });
+      rebuildFloorWithCraterHoles();
+
+      const pit = new THREE.Mesh(
+        new THREE.CircleGeometry(radius * 0.96, 48),
+        new THREE.MeshStandardMaterial({ color: 0x08090d, roughness: 1, side: THREE.DoubleSide }),
+      );
+      pit.rotation.x = -Math.PI / 2;
+      pit.position.set(x, -0.42, z);
+      world.add(pit);
+
+      const rim = new THREE.Mesh(
+        new THREE.TorusGeometry(radius, 0.075, 8, 64),
+        new THREE.MeshStandardMaterial({ color: 0x514b45, roughness: 0.98, flatShading: true }),
+      );
+      rim.rotation.x = -Math.PI / 2;
+      rim.position.set(x, 0.018, z);
+      rim.receiveShadow = true;
+      world.add(rim);
+      return true;
     },
 
     throwTools(from, power = 1) {
