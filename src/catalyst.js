@@ -365,7 +365,7 @@ export class Catalyst {
     const player = this.g.player;
     const forward = player.forwardWorld(new THREE.Vector3());
     const right = new THREE.Vector3(-forward.z, 0, forward.x);
-    const center = player.root.position.clone().addScaledVector(forward, 3.15);
+    const center = player.root.position.clone().addScaledVector(forward, 7.5);
     center.y = 1.25;
     const group = new THREE.Group();
     group.position.copy(center);
