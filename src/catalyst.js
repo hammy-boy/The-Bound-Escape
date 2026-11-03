@@ -365,7 +365,7 @@ export class Catalyst {
     const player = this.g.player;
     const forward = player.forwardWorld(new THREE.Vector3());
     const right = new THREE.Vector3(-forward.z, 0, forward.x);
-    const center = player.root.position.clone().addScaledVector(forward, 2.15);
+    const center = player.root.position.clone().addScaledVector(forward, 3.15);
     center.y = 1.25;
     const group = new THREE.Group();
     group.position.copy(center);
@@ -393,7 +393,7 @@ export class Catalyst {
       bars.push(bar);
     }
     this.g.scene.add(group);
-    this.forceWalls.push({ group, center, forward, right, panel, frame, bars, t: 0, dur: 4.2, hitFlash: 0 });
+    this.forceWalls.push({ group, center, forward, right, panel, frame, bars, hitEnemies: new Set(), t: 0, dur: 4.2, hitFlash: 0 });
     this.g.env.burst(center.clone(), 34, [1, 0.32, 0.82], 1.3, 4.2, 0.75, 0.04);
     this.g.addTrauma(0.2);
   }
@@ -411,18 +411,27 @@ export class Catalyst {
       for (const bar of wall.bars) bar.material.opacity = (0.42 + flash * 0.5) * alpha;
       wall.hitFlash = Math.max(0, flash - dt * 3.2);
 
-      // Enemies that reach the panel are stopped at its face and stagger.
+      // A real impact: give each enemy one strong outward impulse when it
+      // reaches the wall, rather than nudging it a few centimetres every frame.
       for (const enemy of this.g.fighters) {
-        if (enemy.ko || enemy.mode === 'offscreen' || !enemy.root.visible) continue;
+        if (enemy.ko || enemy.mode === 'offscreen' || !enemy.root.visible || wall.hitEnemies.has(enemy)) continue;
         const dx = enemy.root.position.x - wall.center.x;
         const dz = enemy.root.position.z - wall.center.z;
         const depth = dx * wall.forward.x + dz * wall.forward.z;
         const lateral = dx * wall.right.x + dz * wall.right.z;
-        if (Math.abs(lateral) > 2.95 || Math.abs(depth) > 0.72) continue;
-        enemy.root.position.x += wall.forward.x * (depth >= 0 ? 0.16 : -0.16);
-        enemy.root.position.z += wall.forward.z * (depth >= 0 ? 0.16 : -0.16);
+        if (Math.abs(lateral) > 2.95 || Math.abs(depth) > 0.9) continue;
+
+        const side = depth >= 0 ? 1 : -1;
+        const pushX = wall.forward.x * side;
+        const pushZ = wall.forward.z * side;
+        // Move them clear of the panel immediately, then let the shove carry
+        // them properly backwards with a strong, decaying knockback.
+        enemy.root.position.x += pushX * 0.28;
+        enemy.root.position.z += pushZ * 0.28;
+        this._shove(enemy, pushX * 18, pushZ * 18);
+        wall.hitEnemies.add(enemy);
         wall.hitFlash = 1;
-        if (!enemy.scout && enemy.mode !== 'stagger') enemy.setMode('stagger');
+        if (!enemy.scout) enemy.setMode('stagger');
       }
       if (wall.t >= wall.dur) {
         this.g.scene.remove(wall.group);
