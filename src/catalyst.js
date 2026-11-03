@@ -131,61 +131,71 @@ export class Catalyst {
     return true;
   }
 
-  // Short, animated 3D power flourishes. These are separate from the instant
-  // gameplay effects below, so each ability has a visible wind-up/release.
+  // First-person power flourishes. Keeping these just in front of the camera
+  // makes every activation readable even when the player cannot see their body.
   _spawnPowerAnimation(slot, def) {
-    const g = this.g;
-    const origin = g.player.root.position.clone();
+    const camera = this.g.camera;
     const group = new THREE.Group();
-    group.position.copy(origin);
-    g.scene.add(group);
+    group.position.set(0, -0.02, -1.65);
+    camera.add(group);
 
-    const makeRing = (radius, tube, y, opacity = 0.9) => {
+    const makeRing = (radius, tube, z = 0, opacity = 0.9) => {
       const material = new THREE.MeshBasicMaterial({
         color: def.hex, transparent: true, opacity,
         blending: THREE.AdditiveBlending, depthWrite: false,
+        side: THREE.DoubleSide,
       });
-      const mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 8, 48), material);
-      mesh.rotation.x = Math.PI / 2;
-      mesh.position.y = y;
+      const mesh = new THREE.Mesh(new THREE.TorusGeometry(radius, tube, 10, 64), material);
+      mesh.position.z = z;
+      mesh.renderOrder = 20;
       group.add(mesh);
       return mesh;
     };
     const rings = [];
     const coreMat = new THREE.MeshBasicMaterial({
-      color: def.hex, transparent: true, opacity: 0.85,
+      color: def.hex, transparent: true, opacity: 0.95,
       blending: THREE.AdditiveBlending, depthWrite: false,
     });
-    const core = new THREE.Mesh(new THREE.SphereGeometry(0.22, 16, 12), coreMat);
-    core.position.y = slot === 3 ? 0.9 : 1.15;
+    const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.17, 2), coreMat);
+    core.renderOrder = 21;
     group.add(core);
 
-    if (slot === 1) { // Bloodfire: rising ember core and expanding fire rings
-      rings.push(makeRing(0.55, 0.09, 0.12), makeRing(0.8, 0.045, 0.75, 0.65));
-      core.scale.set(1.5, 2.2, 1.5);
-    } else if (slot === 2) { // Stasis: suspended, rotating containment hoops
+    if (slot === 1) { // Bloodfire Nova: hot core, ignition ring, outward blast
+      rings.push(makeRing(0.2, 0.045, 0.02), makeRing(0.42, 0.025, -0.03, 0.7));
+      core.scale.set(1, 1.35, 0.7);
+    } else if (slot === 2) { // Rift Stasis: rotating interlocked containment hoops
       for (let i = 0; i < 3; i++) {
-        const ring = makeRing(0.75 + i * 0.25, 0.035, 0.55 + i * 0.38, 0.75);
-        ring.rotation.y = i * Math.PI / 3;
+        const ring = makeRing(0.32 + i * 0.07, 0.018, (i - 1) * 0.025, 0.8);
+        ring.rotation.z = i * Math.PI / 3;
+        ring.rotation.x = (i - 1) * 0.55;
         rings.push(ring);
       }
-      core.scale.setScalar(0.65);
-    } else if (slot === 3) { // Bloodwell: healing pulse rising from the player
-      rings.push(makeRing(0.45, 0.07, 0.15), makeRing(0.7, 0.045, 0.55, 0.6));
-      core.scale.set(1.2, 1.8, 1.2);
-    } else if (slot === 4) { // Kinetic: hard, fast shockwave rings
-      rings.push(makeRing(0.35, 0.11, 0.1), makeRing(0.65, 0.07, 0.18), makeRing(0.95, 0.04, 0.25));
+      core.scale.setScalar(0.55);
+    } else if (slot === 3) { // Bloodwell Surge: rising restorative pulse
+      rings.push(makeRing(0.16, 0.035), makeRing(0.3, 0.02, -0.02, 0.65));
+      core.scale.set(0.85, 1.5, 0.65);
+    } else if (slot === 4) { // Kinetic Shockwave: three rapid concentric impact waves
+      rings.push(makeRing(0.12, 0.04), makeRing(0.25, 0.03), makeRing(0.39, 0.018));
       core.scale.setScalar(0.45);
-    } else { // Matter: bright plasma charge around the player's upper body
-      rings.push(makeRing(0.42, 0.055, 0.95), makeRing(0.58, 0.035, 1.35, 0.6));
-      core.position.y = 1.25;
-      core.scale.set(1.7, 1.7, 1.7);
+    } else { // Matter Disintegration: plasma core inside two orbiting rings
+      rings.push(makeRing(0.24, 0.035), makeRing(0.34, 0.018, 0, 0.65));
+      rings[1].rotation.set(0.75, 0.4, 0.55);
+      core.scale.setScalar(1.25);
     }
 
-    this.powerVfx.push({ group, rings, core, coreMat, t: 0, dur: slot === 5 ? 1.1 : 0.82, slot });
-    while (this.powerVfx.length > 8) {
+    const coreBaseScale = core.scale.clone();
+    this.powerVfx.push({
+      group, rings, core, coreBaseScale, t: 0,
+      dur: slot === 5 ? 1.25 : slot === 2 ? 1.05 : 0.9,
+      slot,
+    });
+    while (this.powerVfx.length > 6) {
       const old = this.powerVfx.shift();
-      g.scene.remove(old.group);
+      old.group.parent?.remove(old.group);
+      old.group.traverse((o) => {
+        o.geometry?.dispose();
+        if (o.material) o.material.dispose();
+      });
     }
   }
 
@@ -194,21 +204,36 @@ export class Catalyst {
       const fx = this.powerVfx[i];
       fx.t += dt;
       const p = Math.min(1, fx.t / fx.dur);
-      const ease = 1 - Math.pow(1 - p, 3);
-      fx.group.rotation.y += dt * (fx.slot === 2 ? 2.8 : fx.slot === 1 ? -1.8 : 1.2);
-      fx.group.position.y = Math.sin(p * Math.PI) * (fx.slot === 3 ? 0.65 : 0.22);
+      const easeOut = 1 - Math.pow(1 - p, 3);
+      const fade = Math.max(0, 1 - p);
+
+      if (fx.slot === 2 || fx.slot === 5) {
+        fx.group.rotation.z += dt * (fx.slot === 2 ? 2.4 : -1.8);
+        fx.group.rotation.y += dt * (fx.slot === 2 ? 1.6 : 2.7);
+      } else {
+        fx.group.rotation.z += dt * (fx.slot === 1 ? -0.7 : 0.5);
+      }
+
       for (let j = 0; j < fx.rings.length; j++) {
         const ring = fx.rings[j];
-        const spread = fx.slot === 2 ? 1 + p * 0.18 : 1 + ease * (fx.slot === 4 ? 5.5 : 3.2);
-        ring.scale.setScalar(spread * (1 + j * 0.08));
-        ring.material.opacity = Math.max(0, (1 - p) * (j === 0 ? 0.95 : 0.65));
+        let spread;
+        if (fx.slot === 2) spread = 1 + Math.sin(p * Math.PI * 2) * 0.08;
+        else if (fx.slot === 3) spread = 0.45 + easeOut * (1.8 + j * 0.35);
+        else if (fx.slot === 4) spread = 0.55 + easeOut * (3.1 + j * 0.55);
+        else spread = 0.45 + easeOut * (2.2 + j * 0.45);
+        ring.scale.setScalar(spread);
+        ring.material.opacity = fade * (j === 0 ? 0.95 : 0.65);
       }
-      const pulse = 0.7 + Math.sin(p * Math.PI * 5) * 0.25;
-      fx.core.scale.multiplyScalar(1); // keep the authored shape; animate via scalar below
-      fx.core.material.opacity = Math.max(0, (1 - p) * pulse);
-      fx.core.rotation.y += dt * 3;
+
+      const pulse = 0.72 + Math.sin(p * Math.PI * (fx.slot === 2 ? 7 : 5)) * 0.28;
+      const coreGrow = fx.slot === 4 ? 0.35 + easeOut * 0.4 : 0.75 + pulse * 0.65;
+      fx.core.scale.copy(fx.coreBaseScale).multiplyScalar(coreGrow);
+      fx.core.material.opacity = fade * pulse;
+      fx.core.rotation.x += dt * 2.2;
+      fx.core.rotation.y += dt * 3.4;
+
       if (p >= 1) {
-        this.g.scene.remove(fx.group);
+        fx.group.parent?.remove(fx.group);
         fx.group.traverse((o) => {
           o.geometry?.dispose();
           if (o.material) o.material.dispose();
