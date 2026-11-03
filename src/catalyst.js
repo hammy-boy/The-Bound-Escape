@@ -152,6 +152,9 @@ export class Catalyst {
   // First-person power flourishes. Keeping these just in front of the camera
   // makes every activation readable even when the player cannot see their body.
   _spawnPowerAnimation(slot, def) {
+    // Bloodfire Nova already has its travelling crimson stream; skip the large
+    // camera-centred rings/core that read like an eye over the screen.
+    if (slot === 1) return;
     const camera = this.g.camera;
     const group = new THREE.Group();
     group.position.set(0, -0.02, -1.65);
