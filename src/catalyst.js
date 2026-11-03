@@ -357,15 +357,26 @@ export class Catalyst {
     this.g.addTrauma(0.25);
   }
 
+  /** Pink Aegis absorbs incoming hits for as long as its field remains active. */
+  absorbDamage(amount) {
+    const fx = this.forceFields.find((field) => field.t < field.dur);
+    if (!fx) return false;
+    fx.hitFlash = 1;
+    this.g.addTrauma(0.08);
+    this.g.audio?.shockwave(0.18);
+    return true;
+  }
+
   _updateForceFields(dt) {
     for (let i = this.forceFields.length - 1; i >= 0; i--) {
       const fx = this.forceFields[i];
       fx.t += dt;
       const fade = Math.min(1, Math.max(0, (fx.dur - fx.t) / 0.65));
+      fx.hitFlash = Math.max(0, (fx.hitFlash || 0) - dt * 3.5);
       const pulse = 0.94 + Math.sin(fx.t * 7.5) * 0.06;
       fx.shell.scale.set(1 * pulse, 1.22 * pulse, 1 * pulse);
-      fx.shell.material.opacity = 0.2 * fade;
-      fx.outline.material.opacity = 0.72 * fade;
+      fx.shell.material.opacity = (0.2 + (fx.hitFlash || 0) * 0.48) * fade;
+      fx.outline.material.opacity = (0.72 + (fx.hitFlash || 0) * 0.25) * fade;
       fx.outline.rotation.y += dt * 0.22;
       fx.rings[0].rotation.y += dt * 0.8;
       fx.rings[1].rotation.x += dt * 0.65;
