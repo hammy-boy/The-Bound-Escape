@@ -381,7 +381,63 @@ export function buildSilo(scene) {
   const elevLight = new THREE.PointLight(0xff2a18, 0, 22, 2);
   elevLight.position.set(0, 6.4, 1.6);
   elevator.add(elevLight);
-  elevator.userData = { shut: 0, closing: false, slab };
+  // A proper freight-lift cabin inside the industrial frame: floor, ceiling,
+  // solid side walls, rear wall and two split sliding doors at the entrance.
+  const cabin = new THREE.Group();
+  cabin.position.set(0, 0.42, -0.05);
+  elevator.add(cabin);
+  const cabinSteel = new THREE.MeshStandardMaterial({
+    color: 0x62666a, metalness: 0.72, roughness: 0.48,
+    emissive: 0x24150b, emissiveIntensity: 0.08,
+  });
+  const cabinDark = new THREE.MeshStandardMaterial({ color: 0x171b1e, metalness: 0.45, roughness: 0.8 });
+  const cabinFloor = new THREE.Mesh(new THREE.BoxGeometry(EW - 1.05, 0.16, 3.0), matGrate);
+  cabinFloor.position.set(0, 0.02, -0.35);
+  cabin.add(cabinFloor);
+  const cabinCeiling = new THREE.Mesh(new THREE.BoxGeometry(EW - 1.05, 0.14, 3.0), cabinSteel);
+  cabinCeiling.position.set(0, 3.55, -0.35);
+  cabin.add(cabinCeiling);
+  for (const sx of [-1, 1]) {
+    const side = new THREE.Mesh(new THREE.BoxGeometry(0.13, 3.5, 3.0), cabinSteel);
+    side.position.set(sx * (EW - 1.05) / 2, 1.8, -0.35);
+    cabin.add(side);
+    for (let y = 0.55; y < 3.3; y += 0.7) {
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(0.035, 0.045, 2.72), cabinDark);
+      rib.position.set(sx * (EW - 1.05) / 2, y, -0.35);
+      cabin.add(rib);
+    }
+  }
+  const rear = new THREE.Mesh(new THREE.BoxGeometry(EW - 1.05, 3.5, 0.14), cabinSteel);
+  rear.position.set(0, 1.8, -1.82);
+  cabin.add(rear);
+  const doorMat = cabinSteel.clone();
+  doorMat.emissive.setHex(0x241006);
+  const doorL = new THREE.Mesh(new THREE.BoxGeometry((EW - 1.05) / 2, 3.35, 0.12), doorMat);
+  const doorR = doorL.clone();
+  doorL.position.set(-(EW - 1.05) / 4, 1.78, 1.15);
+  doorR.position.set((EW - 1.05) / 4, 1.78, 1.15);
+  cabin.add(doorL, doorR);
+  const doorSeam = new THREE.Mesh(new THREE.BoxGeometry(0.045, 3.15, 0.035), cabinDark);
+  doorSeam.position.set(0, 1.78, 1.22);
+  cabin.add(doorSeam);
+  const controlPanel = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.75, 0.09), matDark);
+  controlPanel.position.set((EW - 1.05) / 2 - 0.2, 1.65, 0.88);
+  cabin.add(controlPanel);
+  const callButtonMat = new THREE.MeshStandardMaterial({
+    color: 0xffb04a, emissive: 0x6b2600, emissiveIntensity: 0.18,
+    metalness: 0.2, roughness: 0.35,
+  });
+  const callButton = new THREE.Mesh(new THREE.CircleGeometry(0.055, 16), callButtonMat);
+  callButton.position.set((EW - 1.05) / 2 - 0.2, 1.8, 0.825);
+  cabin.add(callButton);
+  const cabinGlow = new THREE.PointLight(0xff9b48, 0, 7, 2);
+  cabinGlow.position.set(0, 2.6, 0.55);
+  cabin.add(cabinGlow);
+  elevator.userData = {
+    shut: 0, closing: false, slab,
+    cargoCabin: cabin, cargoDoors: [doorL, doorR],
+    cargoButtonMat: callButtonMat, cargoGlow: cabinGlow, cargoPressed: false,
+  };
 
   // ---- the maintenance line the scouts come down ----
   const dropLine = new THREE.Group();
