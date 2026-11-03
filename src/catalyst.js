@@ -70,6 +70,7 @@ export class Catalyst {
     this._alt = 'left';
     this._wasReady = false;
     this.powerVfx = [];
+    this.floorDebris = [];
   }
 
   // Number keys select a test power; Z is the only activation key.
@@ -126,6 +127,7 @@ export class Catalyst {
       this.g.audio.shockwave(1);
       this._concuss(_p, 5.2, { force: 3.5, shatter: true, damage: 1.0 });
     } else if (slot === 5) {
+      this._spawnFloorBreak();
       this._plasma();
     }
     return true;
@@ -199,7 +201,92 @@ export class Catalyst {
     }
   }
 
+  _spawnFloorBreak() {
+    const scene = this.g.scene;
+    const origin = this.g.player.root.position;
+    const debris = [];
+    const palette = [0x77736c, 0x625f59, 0x938b7d, 0x4d4b48];
+    const count = 26;
+    for (let i = 0; i < count; i++) {
+      const angle = (i / count) * Math.PI * 2 + (Math.random() - 0.5) * 0.22;
+      const speed = 1.8 + Math.random() * 3.8;
+      const size = 0.09 + Math.random() * 0.17;
+      const material = new THREE.MeshStandardMaterial({
+        color: palette[i % palette.length],
+        roughness: 0.96,
+        metalness: 0.02,
+        flatShading: true,
+      });
+      const shard = new THREE.Mesh(new THREE.TetrahedronGeometry(size, 0), material);
+      shard.position.set(
+        origin.x + Math.cos(angle) * (0.25 + Math.random() * 0.55),
+        0.06 + Math.random() * 0.08,
+        origin.z + Math.sin(angle) * (0.25 + Math.random() * 0.55),
+      );
+      shard.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, Math.random() * Math.PI);
+      shard.castShadow = true;
+      shard.receiveShadow = true;
+      scene.add(shard);
+      debris.push({
+        mesh: shard,
+        vx: Math.cos(angle) * speed,
+        vz: Math.sin(angle) * speed,
+        vy: 2.8 + Math.random() * 4.4,
+        spinX: (Math.random() - 0.5) * 13,
+        spinY: (Math.random() - 0.5) * 13,
+        spinZ: (Math.random() - 0.5) * 13,
+        age: 0,
+        life: 1.35 + Math.random() * 0.75,
+      });
+    }
+    this.floorDebris.push(...debris);
+    this.g.addTrauma(1.25);
+    this.g.flashV = Math.max(this.g.flashV, 0.72);
+    this.g.input.rumble(0.85, 360);
+    this.g.audio.shockwave(0.9);
+  }
+
+  _updateFloorDebris(dt) {
+    for (let i = this.floorDebris.length - 1; i >= 0; i--) {
+      const piece = this.floorDebris[i];
+      const mesh = piece.mesh;
+      piece.age += dt;
+      piece.vy -= 10.5 * dt;
+      mesh.position.x += piece.vx * dt;
+      mesh.position.y += piece.vy * dt;
+      mesh.position.z += piece.vz * dt;
+      mesh.rotation.x += piece.spinX * dt;
+      mesh.rotation.y += piece.spinY * dt;
+      mesh.rotation.z += piece.spinZ * dt;
+
+      // Let the chunks bounce once, then settle and fade out.
+      if (mesh.position.y < 0.045) {
+        mesh.position.y = 0.045;
+        if (piece.vy < -0.8) {
+          piece.vy *= -0.28;
+          piece.vx *= 0.58;
+          piece.vz *= 0.58;
+        } else {
+          piece.vy = 0;
+          piece.vx *= 0.86;
+          piece.vz *= 0.86;
+        }
+      }
+      if (piece.age > piece.life - 0.35) {
+        mesh.material.transparent = true;
+        mesh.material.opacity = Math.max(0, (piece.life - piece.age) / 0.35);
+      }
+      if (piece.age >= piece.life) {
+        this.g.scene.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+        this.floorDebris.splice(i, 1);
+      }
+    }
+  }
+
   _updatePowerAnimations(dt) {
+    this._updateFloorDebris(dt);
     for (let i = this.powerVfx.length - 1; i >= 0; i--) {
       const fx = this.powerVfx[i];
       fx.t += dt;
