@@ -225,39 +225,53 @@ export class Catalyst {
     const distance = delta.length();
     const direction = delta.clone().normalize();
     const side = new THREE.Vector3(-direction.z, 0, direction.x);
-    const up = new THREE.Vector3(0, 1, 0);
-    const paths = [
-      { color: 0xff241c, radius: 0.035, offset: 0 },
-      { color: 0xff8a42, radius: 0.018, offset: 0.035 },
-      { color: 0x8f0808, radius: 0.014, offset: -0.035 },
-    ];
-    for (const path of paths) {
-      const points = [];
-      const segments = Math.max(5, Math.ceil(distance * 5));
-      for (let i = 0; i <= segments; i++) {
-        const t = i / segments;
-        const point = start.clone().lerp(end, t);
-        if (i !== 0 && i !== segments) {
-          const jitter = (Math.random() - 0.5) * 0.22;
-          point.addScaledVector(side, jitter + path.offset);
-          point.addScaledVector(up, (Math.random() - 0.5) * 0.2);
-        }
-        points.push(point);
-      }
-      const geometry = new THREE.BufferGeometry().setFromPoints(points);
-      const material = new THREE.LineBasicMaterial({
-        color: path.color,
+    // A smooth, liquid-like crimson lance: deliberately a flowing line,
+    // not a jagged lightning bolt or a copy of another character's effect.
+    const control = start.clone().lerp(end, 0.5)
+      .addScaledVector(side, 0.08)
+      .add(new THREE.Vector3(0, 0.12, 0));
+    const curve = new THREE.QuadraticBezierCurve3(start, control, end);
+    const outer = new THREE.Mesh(
+      new THREE.TubeGeometry(curve, Math.max(12, Math.ceil(distance * 8)), 0.075, 8, false),
+      new THREE.MeshBasicMaterial({
+        color: 0xff3038,
+        transparent: true,
+        opacity: 0.34,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
+    const core = new THREE.Mesh(
+      new THREE.TubeGeometry(curve, Math.max(12, Math.ceil(distance * 8)), 0.032, 7, false),
+      new THREE.MeshBasicMaterial({
+        color: 0xb80020,
         transparent: true,
         opacity: 1,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-      });
-      const line = new THREE.Line(geometry, material);
-      line.renderOrder = 30;
-      group.add(line);
-    }
+      }),
+    );
+    outer.renderOrder = 29;
+    core.renderOrder = 30;
+    group.add(outer, core);
+
+    // A small bright tip makes the stream read as travelling into its target.
+    const tip = new THREE.Mesh(
+      new THREE.SphereGeometry(0.065, 10, 8),
+      new THREE.MeshBasicMaterial({
+        color: 0xff6a55,
+        transparent: true,
+        opacity: 0.95,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    );
+    tip.position.copy(end);
+    tip.renderOrder = 31;
+    group.add(tip);
+
     scene.add(group);
-    this.enemyZaps.push({ group, t: 0, dur: 0.24 });
+    this.enemyZaps.push({ group, t: 0, dur: 0.3 });
   }
 
   _updateBloodfireZaps(dt) {
@@ -265,9 +279,12 @@ export class Catalyst {
       const zap = this.enemyZaps[i];
       zap.t += dt;
       const fade = Math.max(0, 1 - zap.t / zap.dur);
-      zap.group.children.forEach((line) => {
-        line.material.opacity = fade;
+      zap.group.children.forEach((part, index) => {
+        part.material.opacity = fade * (index === 0 ? 0.34 : index === 1 ? 1 : 0.95);
       });
+      const pulse = 0.92 + Math.sin(zap.t * 48) * 0.08;
+      zap.group.children[0].scale.setScalar(pulse);
+      zap.group.children[1].scale.setScalar(0.96 + pulse * 0.04);
       if (zap.t >= zap.dur) {
         this.g.scene.remove(zap.group);
         zap.group.traverse((obj) => {
