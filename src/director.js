@@ -517,7 +517,7 @@ export class Director {
       this.silo.cargoEntryMode = true;
       this.silo.setVisible(true);
       this.silo.elevator.visible = true;
-      this.silo.elevator.position.set(0, 0, 0);
+      // Keep the freight elevator at its built-in position on the outer gantry pathway.
       this.silo.elevator.userData.shut = 0;
       this.silo.elevator.userData.closing = false;
       // Reset the call panel whenever Cargo Entry is entered or restarted.
