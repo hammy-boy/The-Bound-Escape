@@ -519,6 +519,18 @@ export class Director {
       this.silo.elevator.position.set(0, 0, 0);
       this.silo.elevator.userData.shut = 0;
       this.silo.elevator.userData.closing = false;
+      // Reset the call panel whenever Cargo Entry is entered or restarted.
+      const cargoLift = this.silo.elevator.userData;
+      cargoLift.cargoPressed = false;
+      if (cargoLift.cargoGlow) cargoLift.cargoGlow.intensity = 0;
+      if (cargoLift.cargoButtonMat) {
+        cargoLift.cargoButtonMat.emissive.setHex(0x5a3218);
+        cargoLift.cargoButtonMat.emissiveIntensity = 0.2;
+      }
+      for (const door of cargoLift.cargoDoors || []) {
+        door.material.emissive.setHex(0x17191a);
+        door.material.emissiveIntensity = 0.12;
+      }
       p.root.position.set(0, 0, 5.2);
       p.aimYaw(Math.PI);
       this.hud.darkness(1);
@@ -551,10 +563,15 @@ export class Director {
       this.prompt(null);
       this.opts.moveSpeed = 0;
       this.audio.clang();
-      this.g.addTrauma(0.22);
+      this.g.addTrauma(0.12);
       this.say('', 'The elevator control lights up. The heavy doors begin to close.', 4.8);
-      this.after(2.8, () => this.announce('FREIGHT LIFT OCCUPIED. DESCENT CONTROL TRANSFERRED TO LOWER CARGO.', 4.2, 'THE FACILITY · INTERCOM'));
-      this.after(5.2, () => this.think('You grip the wet rail as the freight lift prepares to descend.', 5));
+      this.after(1.6, () => {
+        // Do not leave the player permanently locked while the Chapter Two
+        // descent sequence is still being built.
+        this.opts.moveSpeed = 3.2;
+      });
+      this.after(2.8, () => this.announce('FREIGHT LIFT CALLED. DESCENT PREPARING.', 4.2, 'THE FACILITY · INTERCOM'));
+      this.after(5.2, () => this.think('The freight lift is ready for the descent.', 5));
     }
   }
 
