@@ -514,6 +514,7 @@ export class Director {
       this.opts.threat = null;
       this.opts.clamp = (pos) => this.silo.clamp(pos);
       this.silo.platformOnly = true;
+      this.silo.cargoEntryMode = true;
       this.silo.setVisible(true);
       this.silo.elevator.visible = true;
       this.silo.elevator.position.set(0, 0, 0);
