@@ -645,6 +645,7 @@ export function buildSilo(scene) {
     hatchWant: 0,
     hatchOpen: 0,
     platformOnly: false,   // the sector is sealed: the bridge mouth is a wall too
+    cargoEntryMode: false, // lightweight static environment while boarding the freight lift
 
     pipeWorld(out = V()) { return elbow.getWorldPosition(out); },
     valveWorld(out = V()) { return body.getWorldPosition(out); },
@@ -748,6 +749,7 @@ export function buildSilo(scene) {
     setVisible(v) { group.visible = v; },
 
     update(dt, t) {
+      if (api.cargoEntryMode) return; // skip animated silo effects during Cargo Entry
       api.sway = Math.sin(t * 0.52) * 0.34;
       // red beacons sweeping the ring
       for (const b of beacons) {
