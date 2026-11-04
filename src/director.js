@@ -534,12 +534,12 @@ export class Director {
     const liftPos = this.silo.elevator.position;
     const distance = Math.hypot(p.root.position.x - liftPos.x, p.root.position.z - liftPos.z);
     const liftData = this.silo.elevator.userData;
-    if (!liftData.cargoPressed && distance < 3.0) {
+    if (!liftData.cargoPressed && distance < 7.5) {
       this.prompt('<b>E</b> — ENTER FREIGHT ELEVATOR');
-    } else if (!liftData.cargoPressed && distance >= 3.0) {
+    } else if (!liftData.cargoPressed && distance >= 7.5) {
       this.prompt(null);
     }
-    if (!liftData.cargoPressed && distance < 3.0 && this.input.pressed('KeyE')) {
+    if (!liftData.cargoPressed && distance < 7.5 && this.input.pressed('KeyE')) {
       liftData.cargoPressed = true;
       liftData.cargoGlow.intensity = 2.2;
       liftData.cargoButtonMat.emissive.setHex(0xff7a22);
