@@ -377,8 +377,7 @@ export function buildSilo(scene) {
   for (const x of [-1.65, 0, 1.65]) {
     const lamp = new THREE.Mesh(new THREE.CircleGeometry(0.105, 16), new THREE.MeshBasicMaterial({ color: 0xffead0 }));
     lamp.rotation.x = -Math.PI / 2; lamp.position.set(x, facadeH + 0.5, 0.1); elevator.add(lamp);
-    const light = new THREE.PointLight(0xffd8ad, 1.8, 5, 2);
-    light.position.set(x, facadeH + 0.25, 0.5); elevator.add(light);
+    // Emissive lamp discs provide the glow without costly dynamic lights.
   }
   const cabinGlow = new THREE.PointLight(0xffc58a, 0, 7, 2);
   cabinGlow.position.set(0, 2.8, 1.2); elevator.add(cabinGlow);
