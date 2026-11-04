@@ -18,7 +18,7 @@ import { Nav } from './nav.js';
 
 const canvas = document.getElementById('game');
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
-renderer.shadowMap.enabled = true;
+renderer.shadowMap.enabled = false; // performance: avoid expensive per-frame shadow rendering
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.12;
@@ -397,6 +397,7 @@ function handleActions() {
   // ---------------- loop ----------------
 function resize() {
   const w = innerWidth, h = innerHeight;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
   renderer.setSize(w, h, true);
   camera.aspect = w / h;
   camera.updateProjectionMatrix();
